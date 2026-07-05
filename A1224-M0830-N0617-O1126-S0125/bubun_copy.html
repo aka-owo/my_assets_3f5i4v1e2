@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex,nofollow,noarchive">
-    <title>Text Extractor Triple</title>
+    <title>Text Extractor Quintuple</title>
     <style>
         /* 嵐メンバーカラー（大人トーン：緑・紫・黄・赤・青） */
         :root {
@@ -227,40 +227,58 @@
                 <div class="result-box" id="resultText3"></div>
                 <button class="btn-copy" id="copyBtn3" onclick="copyResult(3)">✓ RESULT 3 をコピー</button>
             </div>
+
+            <div class="result-block" id="block4">
+                <label>RESULT 4 (4箇所目)</label>
+                <div class="result-box" id="resultText4"></div>
+                <button class="btn-copy" id="copyBtn4" onclick="copyResult(4)">✓ RESULT 4 をコピー</button>
+            </div>
+
+            <div class="result-block" id="block5">
+                <label>RESULT 5 (5箇所目)</label>
+                <div class="result-box" id="resultText5"></div>
+                <button class="btn-copy" id="copyBtn5" onclick="copyResult(5)">✓ RESULT 5 をコピー</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // コピー用の一時保管配列
-        let extractedTexts = ["", "", "", ""];
+        // コピー用の一時保管配列（5箇所分に対応させるため要素数を拡張）
+        let extractedTexts = ["", "", "", "", "", ""];
 
         function extractAll() {
             const text = document.getElementById('inputText').value;
             const start = document.getElementById('startChar').value;
             const end = document.getElementById('endChar').value;
             
-            // 各種要素の取得
+            // 各種要素の取得（4と5を追加）
             const blocks = [
                 null,
                 document.getElementById('block1'),
                 document.getElementById('block2'),
-                document.getElementById('block3')
+                document.getElementById('block3'),
+                document.getElementById('block4'),
+                document.getElementById('block5')
             ];
             const resBoxes = [
                 null,
                 document.getElementById('resultText1'),
                 document.getElementById('resultText2'),
-                document.getElementById('resultText3')
+                document.getElementById('resultText3'),
+                document.getElementById('resultText4'),
+                document.getElementById('resultText5')
             ];
             const btns = [
                 null,
                 document.getElementById('copyBtn1'),
                 document.getElementById('copyBtn2'),
-                document.getElementById('copyBtn3')
+                document.getElementById('copyBtn3'),
+                document.getElementById('copyBtn4'),
+                document.getElementById('copyBtn5')
             ];
 
-            // 一旦すべて非表示＆状態リセット
-            for (let i = 1; i <= 3; i++) {
+            // 一旦すべて非表示＆状態リセット（ループを5まで回す）
+            for (let i = 1; i <= 5; i++) {
                 blocks[i].style.display = "none";
                 resetBtn(btns[i], i);
                 resBoxes[i].style.color = "var(--text-main)";
@@ -274,8 +292,8 @@
 
             let currentPos = 0;
 
-            // --- 最大3回ループを回して抽出処理を行う ---
-            for (let count = 1; count <= 3; count++) {
+            // --- 最大5回ループを回して抽出処理を行う ---
+            for (let count = 1; count <= 5; count++) {
                 
                 // 開始文字の検索
                 const startIdx = text.indexOf(start, currentPos);
