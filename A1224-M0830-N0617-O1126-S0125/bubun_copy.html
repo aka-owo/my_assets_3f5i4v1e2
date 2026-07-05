@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex,nofollow,noarchive">
-    <title>Text Extractor Quintuple</title>
+    <title>Text Extractor Quintuple - Color</title>
     <style>
         /* 嵐メンバーカラー（大人トーン：緑・紫・黄・赤・青） */
         :root {
@@ -163,6 +163,7 @@
             white-space: pre-wrap;
         }
 
+        /* --- コピーボタンのベーススタイル --- */
         .btn-copy {
             display: inline-flex;
             align-items: center;
@@ -181,10 +182,14 @@
         .btn-copy:active {
             transform: scale(0.96);
         }
-        .btn-copy.copied {
-            background-color: #e2f0d9;
-            color: var(--color-green);
-        }
+
+        /* --- 【新規】コピー完了時、それぞれの個別カラーを適用 --- */
+        .btn-copy.copied.btn-green  { background-color: var(--color-green);  color: #fff; }
+        .btn-copy.copied.btn-purple { background-color: var(--color-purple); color: #fff; }
+        .btn-copy.copied.btn-yellow { background-color: var(--color-yellow); color: #fff; }
+        .btn-copy.copied.btn-red    { background-color: var(--color-red);    color: #fff; }
+        .btn-copy.copied.btn-blue   { background-color: var(--color-blue);   color: #fff; }
+
     </style>
 </head>
 <body>
@@ -213,37 +218,36 @@
             <div class="result-block" id="block1">
                 <label>RESULT 1 (1箇所目)</label>
                 <div class="result-box" id="resultText1"></div>
-                <button class="btn-copy" id="copyBtn1" onclick="copyResult(1)">✓ RESULT 1 をコピー</button>
+                <button class="btn-copy btn-green" id="copyBtn1" onclick="copyResult(1)">✓ RESULT 1 をコピー</button>
             </div>
 
             <div class="result-block" id="block2">
                 <label>RESULT 2 (2箇所目)</label>
                 <div class="result-box" id="resultText2"></div>
-                <button class="btn-copy" id="copyBtn2" onclick="copyResult(2)">✓ RESULT 2 をコピー</button>
+                <button class="btn-copy btn-purple" id="copyBtn2" onclick="copyResult(2)">✓ RESULT 2 をコピー</button>
             </div>
 
             <div class="result-block" id="block3">
                 <label>RESULT 3 (3箇所目)</label>
                 <div class="result-box" id="resultText3"></div>
-                <button class="btn-copy" id="copyBtn3" onclick="copyResult(3)">✓ RESULT 3 をコピー</button>
+                <button class="btn-copy btn-yellow" id="copyBtn3" onclick="copyResult(3)">✓ RESULT 3 をコピー</button>
             </div>
 
             <div class="result-block" id="block4">
                 <label>RESULT 4 (4箇所目)</label>
                 <div class="result-box" id="resultText4"></div>
-                <button class="btn-copy" id="copyBtn4" onclick="copyResult(4)">✓ RESULT 4 をコピー</button>
+                <button class="btn-copy btn-red" id="copyBtn4" onclick="copyResult(4)">✓ RESULT 4 をコピー</button>
             </div>
 
             <div class="result-block" id="block5">
                 <label>RESULT 5 (5箇所目)</label>
                 <div class="result-box" id="resultText5"></div>
-                <button class="btn-copy" id="copyBtn5" onclick="copyResult(5)">✓ RESULT 5 をコピー</button>
+                <button class="btn-copy btn-blue" id="copyBtn5" onclick="copyResult(5)">✓ RESULT 5 をコピー</button>
             </div>
         </div>
     </div>
 
     <script>
-        // コピー用の一時保管配列（5箇所分に対応させるため要素数を拡張）
         let extractedTexts = ["", "", "", "", "", ""];
 
         function extractAll() {
@@ -251,7 +255,6 @@
             const start = document.getElementById('startChar').value;
             const end = document.getElementById('endChar').value;
             
-            // 各種要素の取得（4と5を追加）
             const blocks = [
                 null,
                 document.getElementById('block1'),
@@ -277,7 +280,6 @@
                 document.getElementById('copyBtn5')
             ];
 
-            // 一旦すべて非表示＆状態リセット（ループを5まで回す）
             for (let i = 1; i <= 5; i++) {
                 blocks[i].style.display = "none";
                 resetBtn(btns[i], i);
@@ -292,22 +294,17 @@
 
             let currentPos = 0;
 
-            // --- 最大5回ループを回して抽出処理を行う ---
             for (let count = 1; count <= 5; count++) {
-                
-                // 開始文字の検索
                 const startIdx = text.indexOf(start, currentPos);
                 if (startIdx === -1) {
-                    // 1箇所目すら見つからなかった場合のみエラーを出す
                     if (count === 1) {
                         blocks[1].style.display = "block";
                         resBoxes[1].textContent = "Error: 開始文字が見つかりません。";
                         resBoxes[1].style.color = "var(--color-red)";
                     }
-                    break; // これ以上箇所がないのでループを抜ける
+                    break;
                 }
                 
-                // 終了文字の検索
                 const searchEndPos = startIdx + start.length;
                 const endIdx = text.indexOf(end, searchEndPos);
                 if (endIdx === -1) {
@@ -317,22 +314,16 @@
                     break;
                 }
                 
-                // 切り出し位置の計算
                 const actualEnd = endIdx + end.length;
                 
-                // 抽出テキストを配列に保存して画面に表示
                 extractedTexts[count] = text.substring(startIdx, actualEnd);
                 resBoxes[count].textContent = extractedTexts[count];
                 
-                // 対象のブロックを表示する
                 blocks[count].style.display = "block";
-                
-                // 次の検索開始位置を、現在の終了文字の直後に設定
                 currentPos = actualEnd;
             }
         }
 
-        // 個別コピー用の関数
         function copyResult(num) {
             const textToCopy = extractedTexts[num];
             const btn = document.getElementById(`copyBtn${num}`);
