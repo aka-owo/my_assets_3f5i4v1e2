@@ -1,0 +1,38 @@
+{
+  "weapon": [
+    { "name": "ひのきの棒", "value": 0, "rarity": 0 },
+    { "name": "鉄のつるぎ", "value": 15, "rarity": 0 },
+    { "name": "鋼鉄の大剣", "value": 50, "rarity": 1 },
+    { "name": "魔導の杖", "value": 120, "rarity": 1 },
+    { "name": "竜殺しの大太刀", "value": 280, "rarity": 2 },
+    { "name": "王宮騎士の聖剣", "value": 600, "rarity": 2 },
+    { "name": "👑聖剣エクスカリバー", "value": 1500, "rarity": 3 }
+  ],
+  "armor": [
+    { "name": "布の服", "value": 0, "rarity": 0 },
+    { "name": "旅人の革鎧", "value": 3, "rarity": 0 },
+    { "name": "鉄の胸当て", "value": 10, "rarity": 1 },
+    { "name": "白銀の軽鎧", "value": 25, "rarity": 1 },
+    { "name": "黒金剛の重鎧", "value": 60, "rarity": 2 },
+    { "name": "精霊の加護衣", "value": 120, "rarity": 2 },
+    { "name": "👑竜鱗のフルメイル", "value": 300, "rarity": 3 }
+  ],
+  "pet_battle": [
+    { "name": "迷子のスライム", "type": "heal", "value": 1.0, "rarity": 0 }, 
+    { "name": "おてんば野ウサギ", "type": "crit", "value": 5, "rarity": 0 },
+    { "name": "見習いインプ", "type": "heal", "value": 2.0, "rarity": 1 }, 
+    { "name": "シバ犬（忠犬）", "type": "crit", "value": 12, "rarity": 1 },
+    { "name": "九尾のキツネ", "type": "heal", "value": 4.0, "rarity": 2 }, 
+    { "name": "黒炎のフェニックス", "type": "crit", "value": 25, "rarity": 2 },
+    { "name": "👑暗黒超魔竜", "type": "mix", "value": {"heal": 5.0, "crit": 35}, "rarity": 3 }
+  ],
+  "pet_support": [
+    { "name": "あつまれミニブタ", "type": "gold", "value": 5, "rarity": 0 }, 
+    { "name": "みならい猫", "type": "cost", "value": 3, "rarity": 0 },
+    { "name": "よくばりタヌキ", "type": "gold", "value": 10, "rarity": 1 }, 
+    { "name": "インテリフクロウ", "type": "cost", "value": 7, "rarity": 1 },
+    { "name": "幸運のこうもり", "type": "gold", "value": 18, "rarity": 2 }, 
+    { "name": "大富豪の招き猫", "type": "cost", "value": 12, "rarity": 2 },
+    { "name": "👑ゴールデンドラゴン", "type": "mix", "value": {"gold": 25, "cost": 15}, "rarity": 3 }
+  ]
+}

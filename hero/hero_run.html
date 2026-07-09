@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスクバーヒーロー（ツインペットシステム版）</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background: #111; font-family: sans-serif; color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; gap: 12px; user-select: none;
+        }
+
+        #game-container {
+            position: relative; width: 600px; height: 200px; background: #222;
+            border: 2px solid #444; overflow: hidden; border-radius: 6px;
+        }
+
+        #ui {
+            position: absolute; top: 12px; left: 12px; font-size: 14px;
+            background: rgba(0,0,0,0.7); padding: 8px; border-radius: 5px; z-index: 10; line-height: 1.4;
+        }
+
+        #save-menu { position: absolute; top: 12px; right: 12px; display: flex; gap: 5px; z-index: 10; }
+        .btn {
+            background: #444; color: #fff; border: 1px solid #666;
+            padding: 3px 6px; font-size: 11px; border-radius: 3px; cursor: pointer;
+        }
+        .btn-export { border-color: #00ffcc; color: #00ffcc; }
+        .btn-import { border-color: #ffaa00; color: #ffaa00; }
+
+        /* 装備パネル */
+        #equipment-panel {
+            width: 580px; background: #1a1a1a; border: 2px solid #333; border-radius: 6px;
+            padding: 10px; font-size: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        }
+        .eq-slot { background: #252525; padding: 6px; border-radius: 4px; border-left: 4px solid #555; }
+        .eq-title { font-size: 10px; color: #aaa; margin-bottom: 2px; }
+        .eq-name { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* 倉庫（ストック）確認パネル */
+        #inventory-panel {
+            width: 580px; background: #151515; border: 1px dashed #444; border-radius: 6px;
+            padding: 8px; font-size: 11px; color: #ccc; display: flex; flex-direction: column; gap: 4px;
+        }
+        .inv-row { display: flex; justify-content: space-between; background: #202020; padding: 4px 8px; border-radius: 3px; align-items: center; }
+        .inv-counts { display: flex; gap: 10px; }
+
+        /* ストックアイテム個別のバッジスタイル */
+        .stock-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .stock-badge:hover {
+            filter: brightness(1.3);
+            background: rgba(255,255,255,0.15);
+            transform: scale(1.05);
+        }
+
+        /* 下部メニュー */
+        #bottom-menu { width: 600px; display: flex; flex-direction: column; gap: 10px; }
+        .menu-row { display: flex; gap: 10px; }
+         
+        .btn-upgrade, .btn-gacha {
+            flex: 1; background: #2a2a2a; color: #fff; border: 2px solid #ffaa00;
+            padding: 8px; font-size: 12px; border-radius: 6px; cursor: pointer;
+            font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 2px;
+        }
+        .btn-gacha { border-color: #00ccff; }
+        .btn-upgrade:hover { background: #3a2e15; }
+        .btn-gacha:hover { background: #152e3a; }
+        .btn-upgrade:disabled, .btn-gacha:disabled {
+            border-color: #444; color: #666; background: #1a1a1a; cursor: not-allowed;
+        }
+
+        /* ガチャログ用スタイル */
+        #gacha-log-panel {
+            background: #151515; border: 1px solid #333; border-radius: 6px;
+            padding: 8px; font-size: 11px; display: flex; flex-direction: column; gap: 3px; min-height: 85px;
+        }
+        .gacha-log-title { font-weight: bold; color: #888; font-size: 10px; border-bottom: 1px solid #222; padding-bottom: 2px; margin-bottom: 2px; }
+        .gacha-log-item { display: flex; justify-content: space-between; padding: 1px 4px; border-radius: 2px; background: rgba(255,255,255,0.02); }
+
+        /* レア度別カラー */
+        .rarity-0 { border-color: #888 !important; color: #ccc; } 
+        .rarity-1 { border-color: #00ff66 !important; color: #aaffaa; } 
+        .rarity-2 { border-color: #00ccff !important; color: #aaddff; } 
+        .rarity-3 { border-color: #ffcc00 !important; color: #ffeeaa; } 
+
+        /* キャラクター・背景アニメ */
+        #taskbar {
+            position: absolute; bottom: 0; width: 100%; height: 50px; background-color: #333; border-top: 2px solid #555;
+            background-image: linear-gradient(90deg, #555 25%, transparent 25%); background-size: 40px 100%;
+        }
+        .scrolling { animation: scrollBackground 0.8s linear infinite; }
+        @keyframes scrollBackground { from { background-position: 0 0; } to { background-position: 40px 0; } }
+        .char { position: absolute; bottom: 50px; display: flex; justify-content: center; align-items: center; font-weight: bold; border-radius: 4px; }
+        .hp-bar-container { position: absolute; top: -12px; left: 0; width: 100%; height: 6px; background: #555; border-radius: 3px; overflow: hidden; }
+        .hp-bar-fill { width: 100%; height: 100%; background: #00ff66; transition: width 0.1s ease; }
+        #hero { width: 40px; height: 40px; background: #00ffcc; color: #000; left: 280px; z-index: 5; }
+        .running { animation: bounce 0.3s ease infinite alternate; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+        .dead { background: #555 !important; color: #aaa !important; transform: rotate(-90deg) translateY(5px); }
+        .enemy { width: 40px; height: 40px; background: #ff4444; color: #fff; }
+        .boss { width: 55px; height: 55px; background: #ff0055 !important; }
+        .boss .hp-bar-container { top: -15px; height: 8px; }
+        .damaged { animation: flash 0.1s ease 2; }
+        @keyframes flash { 0% { opacity: 1; } 50% { background: white; color: black; } 100% { opacity: 1; } }
+        .crit-hit { color: #ffcc00 !important; font-weight: 900 !important; font-size: 14px !important; text-shadow: 0 0 4px red; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui">
+            <div id="stage-text">STAGE: 1-1 (1/10w)</div>
+            <div id="gold-text" style="color: #ffcc00; font-weight: bold;">所持金: 0 G</div>
+            <div id="enemy-count" style="font-size: 12px; color: #aaa;">残りモンスター: 1匹</div>
+            <div id="log" style="font-size: 11px; color: #ccc; margin-top: 3px; height: 16px; overflow: hidden;">いざ進軍！</div>
+        </div>
+        <div id="save-menu">
+            <button class="btn btn-export" onclick="exportData()">データ保存</button>
+            <button class="btn btn-import" onclick="importData()">データ読込</button>
+        </div>
+        <div id="hero" class="char running">
+            <div class="hp-bar-container"><div id="hero-hp-fill" class="hp-bar-fill"></div></div>勇者
+        </div>
+        <div id="taskbar" class="scrolling"></div>
+    </div>
+
+    <div id="equipment-panel">
+        <div id="slot-weapon" class="eq-slot rarity-0"><div class="eq-title">⚔️ 武器 (攻撃+)</div><div class="eq-name">-</div></div>
+        <div id="slot-armor" class="eq-slot rarity-0"><div class="eq-title">🛡️ 防具 (防衛-)</div><div class="eq-name">-</div></div>
+        <div id="slot-pet_battle" class="eq-slot rarity-0"><div class="eq-title">🐾 戦闘ペット (回復/会心)</div><div class="eq-name">-</div></div>
+        <div id="slot-pet_support" class="eq-slot rarity-0"><div class="eq-title">🎁 支援ペット (金策/育成)</div><div class="eq-name">-</div></div>
+    </div>
+
+    <div id="inventory-panel">
+        <div style="font-weight: bold; font-size: 10px; color: #888; margin-bottom: 2px;">📦 倉庫ストック (クリックで中身を確認 / 5つ貯まると自動上位合成)</div>
+        <div class="inv-row"><span>⚔️ 武器ストック:</span><span id="stock-weapon" class="inv-counts"></span></div>
+        <div class="inv-row"><span>🛡️ 防具ストック:</span><span id="stock-armor" class="inv-counts"></span></div>
+        <div class="inv-row"><span>🐾 戦闘ペットストック:</span><span id="stock-pet_battle" class="inv-counts"></span></div>
+        <div class="inv-row"><span>🎁 支援ペットストック:</span><span id="stock-pet_support" class="inv-counts"></span></div>
+    </div>
+
+    <div id="bottom-menu">
+        <div class="menu-row">
+            <button id="btn-atk" class="btn-upgrade" onclick="upgradeStat('atk')">
+                <span>⚔️ 攻撃力 UP (Lv.1)</span><span id="cost-atk" style="color: #ffcc00; font-size: 11px;">10 G</span>
+            </button>
+            <button id="btn-hp" class="btn-upgrade" onclick="upgradeStat('hp')">
+                <span>❤️ 最大HP UP (Lv.1)</span><span id="cost-hp" style="color: #ffcc00; font-size: 11px;">15 G</span>
+            </button>
+        </div>
+        <div class="menu-row">
+            <button id="btn-gacha" class="btn-gacha" onclick="drawGacha()">
+                <span>🎁 装備ガチャを引く</span><span id="cost-gacha" style="color: #00ccff; font-size: 11px;">50 G</span>
+            </button>
+        </div>
+         
+        <div id="gacha-log-panel">
+            <div class="gacha-log-title">📋 直近のガチャ履歴 (最新5件)</div>
+            <div id="gacha-log-content" style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="color: #555; text-align: center; padding-top: 20px;">まだガチャを引いていません</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let world = 1, stage = 1, wave = 1; const maxWave = 10;
+        let gold = 0, atkLevel = 1, hpLevel = 1;
+        const HERO_X = 280;
+        let hero = { hp: 100, maxHp: 100, atkCooldown: 0, isRunning: true, isDead: false, reviveTimer: 0 };
+        let enemies = [], runTimer = 0;
+        let gachaLog = [];
+
+        // 外部からデータを読み込むため、最初は空（null）にしておく
+        let equipDb = null;
+
+        // --- 消えていた変数定義とDOM取得を復元 ---
+        let myEquip = { weapon: 0, armor: 0, pet_battle: 0, pet_support: 0 };
+        let myInventory = {
+            weapon: [0, 0, 0],
+            armor: [0, 0, 0],
+            pet_battle: [0, 0, 0],
+            pet_support: [0, 0, 0]
+        };
+
+        const container = document.getElementById('game-container');
+        const heroEl = document.getElementById('hero');
+        const heroHpFillEl = document.getElementById('hero-hp-fill');
+        const stageTextEl = document.getElementById('stage-text');
+        const goldTextEl = document.getElementById('gold-text');
+        const enemyCountEl = document.getElementById('enemy-count');
+        const logEl = document.getElementById('log');
+
+        const btnAtkEl = document.getElementById('btn-atk');
+        const btnHpEl = document.getElementById('btn-hp');
+        const btnGachaEl = document.getElementById('btn-gacha');
+        const costAtkEl = document.getElementById('cost-atk');
+        const costHpEl = document.getElementById('cost-hp');
+        const costGachaEl = document.getElementById('cost-gacha');
+        const gachaLogContentEl = document.getElementById('gacha-log-content');
+
+        function getUpgradeCost(type, lv) { return type === 'atk' ? lv * 10 : lv * 15; }
+        function getGachaCost() { return 50 + (world - 1) * 100 + (stage - 1) * 10; }
+        // ----------------------------------------
+         
+        // 🎁 外部テキスト（JSON）ファイルを読み込む関数
+        async function loadEquipmentDatabase() {
+            try {
+                // 同じフォルダにある「equip_data.json」を読み込む
+                const response = await fetch('equip_data.json');
+                if (!response.ok) throw new Error('ファイルの読み込みに失敗しました');
+                 
+                // 読み込んだテキストデータをゲーム用データベースに格納
+                equipDb = await response.json();
+                console.log("データの読み込み成功！", equipDb);
+
+                // データの読み込みが「完了した後に」ゲームを開始する
+                initGame();
+            } catch (error) {
+                alert("【エラー】装備データが読み込めませんでした。\n理由: " + error.message);
+            }
+        }
+
+        // ゲームの初期起動処理をまとめた関数
+        function initGame() {
+            loadGame(); 
+            spawnWave(); 
+            gameLoop();
+        }
+
+        function addGachaLog(item, actionText) {
+            const rarityLabels = ["C", "R", "E", "L"];
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            gachaLog.unshift({ time: timeStr, name: item.name, rarity: item.rarity, action: actionText });
+            if (gachaLog.length > 5) gachaLog.pop();
+            
+            gachaLogContentEl.innerHTML = gachaLog.map(log => `
+                <div class="gacha-log-item">
+                    <span style="color:#666; margin-right:4px;">[${log.time}]</span>
+                    <span class="rarity-${log.rarity}" style="font-weight:bold;">【${rarityLabels[log.rarity]}】${log.name}</span>
+                    <span style="color:#aaa; font-size:10px;">➔ ${log.action}</span>
+                </div>
+            `).join('');
+        }
+
+        function showStockItems(type, rarity) {
+            if(!equipDb) return;
+            const items = equipDb[type].filter(item => item.rarity === rarity);
+            const names = items.map(i => i.name).join('、');
+            alert(`【${type.toUpperCase()} - レア度:${rarity}】のストック対象候補:\n${names}`);
+        }
+
+        function evaluateAndAddProduct(slot, rolledIndex) {
+            const item = equipDb[slot][rolledIndex];
+            const currentEquipped = equipDb[slot][myEquip[slot]];
+            
+            if (item.rarity > currentEquipped.rarity || (item.rarity === currentEquipped.rarity && item.value > currentEquipped.value)) {
+                myEquip[slot] = rolledIndex;
+                logEl.innerHTML = `✨ 装備更新：「${item.name}」を新しく装備しました！`;
+                addGachaLog(item, "⚔️ 自動装備");
+            } else {
+                if (item.rarity < 3) {
+                    myInventory[slot][item.rarity]++;
+                    logEl.innerHTML = `📦 倉庫行き：「${item.name}」をストックに送りました。`;
+                    addGachaLog(item, "📦 倉庫にストック");
+                    checkAndCombine(slot);
+                } else {
+                    let cash = Math.floor(getGachaCost() * 1.5);
+                    gold += cash;
+                    logEl.innerHTML = `💰 換金：最高レア重複のため「${item.name}」を ${cash}G で売却しました。`;
+                    addGachaLog(item, `💰 重複売却 (+${cash}G)`);
+                }
+            }
+        }
+
+        function checkAndCombine(slot) {
+            for (let r = 0; r < 3; r++) {
+                if (myInventory[slot][r] >= 5) {
+                    myInventory[slot][r] -= 5;
+                    let nextRarity = r + 1;
+                    const pool = equipDb[slot].filter(item => item.rarity === nextRarity);
+                    const rolledItem = pool[Math.floor(Math.random() * pool.length)];
+                    const rolledIndex = equipDb[slot].indexOf(rolledItem);
+                    logEl.innerHTML = `🧪 <span style="color:#00ff66; font-weight:bold;">【自動合成発動】</span>同レアのストック5個が合体！上位品「${rolledItem.name}」を錬成！`;
+                    evaluateAndAddProduct(slot, rolledIndex);
+                    break; 
+                }
+            }
+        }
+
+        function drawGacha() {
+            let cost = getGachaCost(); if (gold < cost) return; gold -= cost;
+            const slots = ['weapon', 'armor', 'pet_battle', 'pet_support'];
+            const chosenSlot = slots[Math.floor(Math.random() * slots.length)];
+            let rand = Math.random() * 100;
+            let targetRarity = 0;
+            if (rand < 3) targetRarity = 3;
+            else if (rand < 15) targetRarity = 2;
+            else if (rand < 40) targetRarity = 1;
+
+            const pool = equipDb[chosenSlot].filter(item => item.rarity === targetRarity);
+            const rolledItem = pool[Math.floor(Math.random() * pool.length)];
+            const rolledIndex = equipDb[chosenSlot].indexOf(rolledItem);
+            evaluateAndAddProduct(chosenSlot, rolledIndex);
+            saveGame(); updateUI();
+        }
+
+        function upgradeStat(type) {
+            if (type === 'atk') {
+                let cost = getUpgradeCost('atk', atkLevel);
+                if (gold >= cost) { gold -= cost; atkLevel++; logEl.innerText = `✨ 攻撃力 Lv.${atkLevel}`; }
+            } else if (type === 'hp') {
+                let cost = getUpgradeCost('hp', hpLevel);
+                if (gold >= cost) {
+                    gold -= cost; hpLevel++;
+                    let oldMax = hero.maxHp; hero.maxHp = 100 + (hpLevel - 1) * 20; hero.hp += (hero.maxHp - oldMax);
+                    logEl.innerText = `✨ 最大HP Lv.${hpLevel}`;
+                }
+            }
+            saveGame(); updateUI();
+        }
+
+        function saveGame() {
+            localStorage.setItem('tbh_v4_save', JSON.stringify({ world, stage, wave, gold, atkLevel, hpLevel, myEquip, myInventory }));
+        }
+
+        function loadGame() {
+            const raw = localStorage.getItem('tbh_v4_save');
+            if (raw) {
+                const data = JSON.parse(raw);
+                world = data.world; stage = data.stage; wave = data.wave; gold = data.gold || 0;
+                atkLevel = data.atkLevel || 1; hpLevel = data.hpLevel || 1;
+                myEquip = data.myEquip || { weapon: 0, armor: 0, pet_battle: 0, pet_support: 0 };
+                myInventory = data.myInventory || { weapon: [0,0,0], armor: [0,0,0], pet_battle: [0,0,0], pet_support: [0,0,0] };
+            }
+            hero.maxHp = 100 + (hpLevel - 1) * 20; hero.hp = hero.maxHp;
+        }
+
+        function exportData() {
+            const code = btoa(JSON.stringify({ world, stage, wave, gold, atkLevel, hpLevel, myEquip, myInventory }));
+            navigator.clipboard.writeText(code).then(() => alert(`コードをコピーしました！`));
+        }
+
+        function importData() {
+            const code = prompt("コード貼り付け："); if (!code) return;
+            try {
+                const data = JSON.parse(atob(code));
+                world = data.world; stage = data.stage; wave = data.wave; gold = data.gold;
+                atkLevel = data.atkLevel; hpLevel = data.hpLevel; myEquip = data.myEquip;
+                myInventory = data.myInventory || { weapon: [0,0,0], armor: [0,0,0], pet_battle: [0,0,0], pet_support: [0,0,0] };
+                hero.maxHp = 100 + (hpLevel - 1) * 20; hero.hp = hero.maxHp; hero.isDead = false;
+                heroEl.className = "char running"; saveGame(); updateUI(); spawnWave();
+                alert("成功！");
+            } catch (e) { alert("エラー"); }
+        }
+
+        function getRandomRange(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        function spawnWave() {
+            document.querySelectorAll('.enemy').forEach(el => el.remove()); enemies = [];
+            let isBossWave = (wave === maxWave);
+             
+            if (isBossWave) {
+                let bossHp = 100 + (stage - 1) * 150;
+                createEnemyData(-60, true, "ボス", bossHp);
+            } else {
+                let enemyCount = wave === 1 ? 1 : (wave <= 4 ? getRandomRange(2, 3) : getRandomRange(3, 5));
+                for (let i = 0; i < enemyCount; i++) {
+                    let enemyHp = 15 + (stage - 1) * 25 + getRandomRange(0, 10);
+                    createEnemyData(-60 - (i * 45), false, `ザコ`, enemyHp);
+                }
+            }
+            if (!hero.isDead) setHeroState(true);
+            updateUI();
+        }
+
+        function createEnemyData(startX, isBoss, name, hp) {
+            const el = document.createElement('div'); el.className = 'char enemy'; if (isBoss) el.classList.add('boss');
+            el.innerHTML = `<div class="hp-bar-container"><div class="hp-bar-fill"></div></div><span>${name}</span>`;
+            container.appendChild(el);
+            enemies.push({ x: startX, hp: hp, maxHp: hp, isBoss: isBoss, element: el, hpFillElement: el.querySelector('.hp-bar-fill'), atkCooldown: getRandomRange(15, 35) });
+        }
+
+        function setHeroState(running) {
+            hero.isRunning = running;
+            if (running && !hero.isDead) { heroEl.classList.add('running'); document.getElementById('taskbar').classList.add('scrolling'); }
+            else { heroEl.classList.remove('running'); document.getElementById('taskbar').classList.remove('scrolling'); }
+        }
+
+        function updateUI() {
+            if (!equipDb) return; // データ未ロード時はスキップ
+
+            stageTextEl.innerText = `STAGE: ${world}-${stage} (${wave === maxWave ? "BOSS" : wave + "/" + maxWave + "w"})`;
+            goldTextEl.innerText = `所持金: ${gold} G`;
+            enemyCountEl.innerText = `残り: ${enemies.filter(e => e.hp > 0).length}匹`;
+            heroHpFillEl.style.width = Math.max(0, (hero.hp / hero.maxHp) * 100) + "%";
+
+            let atkCost = getUpgradeCost('atk', atkLevel), hpCost = getUpgradeCost('hp', hpLevel), gachaCost = getGachaCost();
+            btnAtkEl.querySelector('span:first-child').innerText = `⚔️ 攻撃力 UP (Lv.${atkLevel})`; costAtkEl.innerText = `${atkCost} G`; btnAtkEl.disabled = (gold < atkCost);
+            btnHpEl.querySelector('span:first-child').innerText = `❤️ 最大HP UP (Lv.${hpLevel})`; costHpEl.innerText = `${hpCost} G`; btnHpEl.disabled = (gold < hpCost);
+            costGachaEl.innerText = `${gachaCost} G`; btnGachaEl.disabled = (gold < gachaCost);
+
+            const types = ['weapon', 'armor', 'pet_battle', 'pet_support'];
+            types.forEach(type => {
+                const item = equipDb[type][myEquip[type]];
+                const slotEl = document.getElementById(`slot-${type}`);
+                slotEl.className = `eq-slot rarity-${item.rarity}`;
+                 
+                let bonusText = "";
+                if (type === 'weapon') bonusText = `(+${item.value})`;
+                if (type === 'armor') bonusText = `(-${item.value})`;
+                 
+                // 新しい能力テキストの割り振りと表示
+                if (type === 'pet_battle') {
+                    if (item.type === "heal") bonusText = `(${item.value}x回復)`;
+                    if (item.type === "crit") bonusText = `(${item.value}%会心)`;
+                    if (item.type === "mix") bonusText = `(回復${item.value.heal}x/会心${item.value.crit}%)`;
+                }
+                if (type === 'pet_support') {
+                    if (item.type === "gold") bonusText = `(金運+${item.value}%)`;
+                    if (item.type === "cost") bonusText = `(安値-${item.value}%)`;
+                    if (item.type === "mix") bonusText = `(金+${item.value.gold}%/安-${item.value.cost}%)`;
+                }
+                 
+                slotEl.querySelector('.eq-name').innerText = `${item.name} ${bonusText}`;
+
+                const counts = myInventory[type];
+                document.getElementById(`stock-${type}`).innerHTML = `
+                    <span class="stock-badge rarity-0" onclick="showStockItems('${type}', 0)" title="クリックでアイテム一覧を表示">C:${counts[0]}/5</span> 
+                    <span class="stock-badge rarity-1" onclick="showStockItems('${type}', 1)" title="クリックでアイテム一覧を表示">R:${counts[1]}/5</span> 
+                    <span class="stock-badge rarity-2" onclick="showStockItems('${type}', 2)" title="クリックでアイテム一覧を表示">E:${counts[2]}/5</span>
+                `;
+            });
+        }
+
+        function gameLoop() {
+            if (!equipDb) return; // データ未ロード時はループ処理をスキップ
+
+            if (hero.isDead) {
+                hero.reviveTimer++;
+                if (hero.reviveTimer > 120) {
+                    hero.isDead = false; hero.hp = hero.maxHp; hero.reviveTimer = 0; heroEl.classList.remove('dead');
+                    wave = 1; saveGame(); spawnWave(); logEl.innerText = `😇 復活！ wave 1 から再出発！`;
+                }
+                requestAnimationFrame(gameLoop); return;
+            }
+
+            // ★戦闘ペットの自動回復補正
+            let battlePet = equipDb.pet_battle[myEquip.pet_battle];
+            if (hero.isRunning && hero.hp < hero.maxHp) {
+                let healBonus = 1.0;
+                if (battlePet.type === "heal") healBonus = battlePet.value;
+                else if (battlePet.type === "mix") healBonus = battlePet.value.heal;
+                 
+                hero.hp += (hero.maxHp * 0.0005) * healBonus;
+                if (hero.hp > hero.maxHp) hero.hp = hero.maxHp;
+                updateUI();
+            }
+
+            let targetEnemy = null, maxX = -999;
+            for (let e of enemies) { if (e.hp > 0 && e.x > maxX) { maxX = e.x; targetEnemy = e; } }
+
+            if (targetEnemy) {
+                let touchDistance = targetEnemy.isBoss ? 50 : 40;
+                if ((HERO_X - targetEnemy.x) > touchDistance) {
+                    setHeroState(true); for (let e of enemies) { if (e.hp > 0) e.x += 2.0; }
+                } else {
+                    setHeroState(false);
+                    if (hero.atkCooldown <= 0) {
+                        let wpnBonus = equipDb.weapon[myEquip.weapon].value;
+                        let baseDmg = Math.floor(Math.random() * 6) + 5 + stage + (atkLevel - 1) * 3 + wpnBonus;
+                         
+                        // ★戦闘ペットのクリティカル（会心）補正
+                        let critChance = 0;
+                        if (battlePet.type === "crit") critChance = battlePet.value;
+                        else if (battlePet.type === "mix") critChance = battlePet.value.crit;
+                         
+                        let isCrit = Math.random() * 100 < critChance;
+                        if (isCrit) baseDmg *= 2;
+
+                        targetEnemy.hp -= baseDmg; if (targetEnemy.hp < 0) targetEnemy.hp = 0;
+                        targetEnemy.hpFillElement.style.width = (targetEnemy.hp / targetEnemy.maxHp) * 100 + "%";
+                        targetEnemy.element.classList.add('damaged');
+                        let curEnemyEl = targetEnemy.element;
+                        setTimeout(() => curEnemyEl.classList.remove('damaged'), 100);
+                         
+                        logEl.innerHTML = isCrit 
+                            ? `<span class="crit-hit">💥 会心の一撃!! 敵に ${baseDmg} の超ダメージ!!</span>`
+                            : `⚔️ 勇者の攻撃！ 敵に ${baseDmg} のダメージ！`;
+                         
+                        if (targetEnemy.hp === 0) {
+                            let earnedGold = targetEnemy.isBoss 
+                                ? (30 + (stage - 1) * 45 + getRandomRange(0, 15)) 
+                                : (getRandomRange(2, 5) + (stage - 1) * 4);    
+                           
+                            // ★支援ペットのゴールド獲得アップ補正
+                            let supportPet = equipDb.pet_support[myEquip.pet_support];
+                            let goldBonus = 0;
+                            if (supportPet.type === "gold") goldBonus = supportPet.value;
+                            else if (supportPet.type === "mix") goldBonus = supportPet.value.gold;
+                           
+                            earnedGold = Math.floor(earnedGold * (1 + goldBonus / 100));
+                           
+                            gold += earnedGold; logEl.innerText = `撃破！ 💰 ${earnedGold} G 獲得！`;
+                            setTimeout(() => { curEnemyEl.remove(); }, 100);
+                        }
+                        updateUI(); hero.atkCooldown = 25;
+                    }
+
+                    for (let e of enemies) {
+                        if (e.hp > 0 && HERO_X - e.x <= touchDistance) {
+                            if (e.atkCooldown <= 0) {
+                                let enemyDmg = e.isBoss 
+                                    ? getRandomRange(15, 25) + (stage - 1) * 6 
+                                    : getRandomRange(3, 8) + (stage - 1) * 2;
+                                let armBonus = equipDb.armor[myEquip.armor].value;
+                                enemyDmg = Math.max(1, enemyDmg - armBonus);
+
+                                hero.hp -= enemyDmg;
+                                heroEl.classList.add('damaged'); setTimeout(() => heroEl.classList.remove('damaged'), 100);
+                                logEl.innerText = `💥 敵の反撃！ 勇者は ${enemyDmg} のダメージを受けた！`;
+                                updateUI();
+
+                                if (hero.hp <= 0) {
+                                    hero.hp = 0; hero.isDead = true; setHeroState(false); heroEl.classList.add('dead');
+                                    logEl.innerText = `💀 勇者は倒れた… 倉庫が 5つ 貯まれば自動で上位合成されるぞ！`;
+                                    updateUI(); break;
+                                }
+                                e.atkCooldown = e.isBoss ? 40 : 50;
+                            }
+                        }
+                    }
+                }
+            } else {
+                setHeroState(true); runTimer++;
+                if (runTimer > 60) {
+                    runTimer = 0;
+                    if (wave === maxWave) { stage++; wave = 1; saveGame(); } else { wave++; }
+                    spawnWave();
+                }
+            }
+
+            for (let e of enemies) { e.element.style.left = e.x + "px"; if (e.hp > 0 && e.atkCooldown > 0) e.atkCooldown--; }
+            if (hero.atkCooldown > 0) hero.atkCooldown--;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 起動時は、まずデータの読み込みを開始させる
+        loadEquipmentDatabase();
+   </script>
+</body>
+</html>
