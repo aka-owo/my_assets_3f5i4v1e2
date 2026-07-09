@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex,nofollow,noarchive">
-    <title>Text Extractor 25 - Color</title>
+    <title>Text Extractor 25 - Dual Pattern</title>
     <style>
         /* 嵐メンバーカラー（大人トーン：緑・紫・黄・赤・青） */
         :root {
@@ -74,7 +74,18 @@
             );
         }
 
+        .input-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
         .input-group {
+            flex: 1;
+            margin-bottom: 15px;
+        }
+
+        .input-group.main-textarea {
             margin-bottom: 20px;
         }
 
@@ -85,6 +96,12 @@
             color: var(--text-sub);
             letter-spacing: 0.03em;
             margin-bottom: 8px;
+        }
+
+        .label-sub {
+            color: #adb5bd;
+            font-size: 0.7rem;
+            margin-left: 5px;
         }
 
         input[type="text"], textarea {
@@ -107,9 +124,6 @@
             box-shadow: 0 0 0 3px rgba(224, 176, 52, 0.15);
         }
 
-        .main-textarea {
-            margin-bottom: 20px;
-        }
         textarea {
             height: 120px;
             resize: none;
@@ -162,7 +176,6 @@
             white-space: pre-wrap;
         }
 
-        /* --- コピーボタンのベーススタイル --- */
         .btn-copy {
             display: inline-flex;
             align-items: center;
@@ -182,7 +195,6 @@
             transform: scale(0.96);
         }
 
-        /* --- コピー完了時、それぞれの個別カラーを適用 --- */
         .btn-copy.copied.btn-green  { background-color: var(--color-green);  color: #fff; }
         .btn-copy.copied.btn-purple { background-color: var(--color-purple); color: #fff; }
         .btn-copy.copied.btn-yellow { background-color: var(--color-yellow); color: #fff; }
@@ -196,17 +208,29 @@
     <div class="container">
         <h2>TEXT EXTRACTOR</h2>
 
-        <div class="input-group">
-            <label for="startChar">START</label>
-            <input type="text" id="startChar" value="## 物語">
+        <div class="input-row">
+            <div class="input-group">
+                <label for="startChar1">START 1<span class="label-sub">(基本)</span></label>
+                <input type="text" id="startChar1" value="これから">
+            </div>
+            <div class="input-group">
+                <label for="endChar1">END 1<span class="label-sub">(基本)</span></label>
+                <input type="text" id="endChar1" value="ました。」">
+            </div>
         </div>
         
-        <div class="input-group">
-            <label for="endChar">END</label>
-            <input type="text" id="endChar" value="返して】">
+        <div class="input-row">
+            <div class="input-group">
+                <label for="startChar2">START 2<span class="label-sub">(物語)</span></label>
+                <input type="text" id="startChar2" value="## 物語">
+            </div>
+            <div class="input-group">
+                <label for="endChar2">END 2<span class="label-sub">(終了文)</span></label>
+                <input type="text" id="endChar2" value="返して】">
+            </div>
         </div>
 
-        <div class="main-textarea">
+        <div class="input-group main-textarea">
             <label for="inputText">SOURCE TEXT</label>
             <textarea id="inputText" placeholder="ここにテキストを入力..."></textarea>
         </div>
@@ -214,148 +238,34 @@
         <button class="btn-main" onclick="extractAll()">テキストを解析・抽出する</button>
 
         <div class="result-section">
-            <div class="result-block" id="block1">
-                <label>RESULT 1 (1箇所目)</label>
-                <div class="result-box" id="resultText1"></div>
-                <button class="btn-copy btn-green" id="copyBtn1" onclick="copyResult(1)">✓ RESULT 1 をコピー</button>
-            </div>
-            <div class="result-block" id="block2">
-                <label>RESULT 2 (2箇所目)</label>
-                <div class="result-box" id="resultText2"></div>
-                <button class="btn-copy btn-purple" id="copyBtn2" onclick="copyResult(2)">✓ RESULT 2 をコピー</button>
-            </div>
-            <div class="result-block" id="block3">
-                <label>RESULT 3 (3箇所目)</label>
-                <div class="result-box" id="resultText3"></div>
-                <button class="btn-copy btn-yellow" id="copyBtn3" onclick="copyResult(3)">✓ RESULT 3 をコピー</button>
-            </div>
-            <div class="result-block" id="block4">
-                <label>RESULT 4 (4箇所目)</label>
-                <div class="result-box" id="resultText4"></div>
-                <button class="btn-copy btn-red" id="copyBtn4" onclick="copyResult(4)">✓ RESULT 4 をコピー</button>
-            </div>
-            <div class="result-block" id="block5">
-                <label>RESULT 5 (5箇所目)</label>
-                <div class="result-box" id="resultText5"></div>
-                <button class="btn-copy btn-blue" id="copyBtn5" onclick="copyResult(5)">✓ RESULT 5 をコピー</button>
-            </div>
-
-            <div class="result-block" id="block6">
-                <label>RESULT 6 (6箇所目)</label>
-                <div class="result-box" id="resultText6"></div>
-                <button class="btn-copy btn-green" id="copyBtn6" onclick="copyResult(6)">✓ RESULT 6 をコピー</button>
-            </div>
-            <div class="result-block" id="block7">
-                <label>RESULT 7 (7箇所目)</label>
-                <div class="result-box" id="resultText7"></div>
-                <button class="btn-copy btn-purple" id="copyBtn7" onclick="copyResult(7)">✓ RESULT 7 をコピー</button>
-            </div>
-            <div class="result-block" id="block8">
-                <label>RESULT 8 (8箇所目)</label>
-                <div class="result-box" id="resultText8"></div>
-                <button class="btn-copy btn-yellow" id="copyBtn8" onclick="copyResult(8)">✓ RESULT 8 をコピー</button>
-            </div>
-            <div class="result-block" id="block9">
-                <label>RESULT 9 (9箇所目)</label>
-                <div class="result-box" id="resultText9"></div>
-                <button class="btn-copy btn-red" id="copyBtn9" onclick="copyResult(9)">✓ RESULT 9 をコピー</button>
-            </div>
-            <div class="result-block" id="block10">
-                <label>RESULT 10 (10箇所目)</label>
-                <div class="result-box" id="resultText10"></div>
-                <button class="btn-copy btn-blue" id="copyBtn10" onclick="copyResult(10)">✓ RESULT 10 をコピー</button>
-            </div>
-
-            <div class="result-block" id="block11">
-                <label>RESULT 11 (11箇所目)</label>
-                <div class="result-box" id="resultText11"></div>
-                <button class="btn-copy btn-green" id="copyBtn11" onclick="copyResult(11)">✓ RESULT 11 をコピー</button>
-            </div>
-            <div class="result-block" id="block12">
-                <label>RESULT 12 (12箇所目)</label>
-                <div class="result-box" id="resultText12"></div>
-                <button class="btn-copy btn-purple" id="copyBtn12" onclick="copyResult(12)">✓ RESULT 12 をコピー</button>
-            </div>
-            <div class="result-block" id="block13">
-                <label>RESULT 13 (13箇所目)</label>
-                <div class="result-box" id="resultText13"></div>
-                <button class="btn-copy btn-yellow" id="copyBtn13" onclick="copyResult(13)">✓ RESULT 13 をコピー</button>
-            </div>
-            <div class="result-block" id="block14">
-                <label>RESULT 14 (14箇所目)</label>
-                <div class="result-box" id="resultText14"></div>
-                <button class="btn-copy btn-red" id="copyBtn14" onclick="copyResult(14)">✓ RESULT 14 をコピー</button>
-            </div>
-            <div class="result-block" id="block15">
-                <label>RESULT 15 (15箇所目)</label>
-                <div class="result-box" id="resultText15"></div>
-                <button class="btn-copy btn-blue" id="copyBtn15" onclick="copyResult(15)">✓ RESULT 15 をコピー</button>
-            </div>
-
-            <div class="result-block" id="block16">
-                <label>RESULT 16 (16箇所目)</label>
-                <div class="result-box" id="resultText16"></div>
-                <button class="btn-copy btn-green" id="copyBtn16" onclick="copyResult(16)">✓ RESULT 16 をコピー</button>
-            </div>
-            <div class="result-block" id="block17">
-                <label>RESULT 17 (17箇所目)</label>
-                <div class="result-box" id="resultText17"></div>
-                <button class="btn-copy btn-purple" id="copyBtn17" onclick="copyResult(17)">✓ RESULT 17 をコピー</button>
-            </div>
-            <div class="result-block" id="block18">
-                <label>RESULT 18 (18箇所目)</label>
-                <div class="result-box" id="resultText18"></div>
-                <button class="btn-copy btn-yellow" id="copyBtn18" onclick="copyResult(18)">✓ RESULT 18 をコピー</button>
-            </div>
-            <div class="result-block" id="block19">
-                <label>RESULT 19 (19箇所目)</label>
-                <div class="result-box" id="resultText19"></div>
-                <button class="btn-copy btn-red" id="copyBtn19" onclick="copyResult(19)">✓ RESULT 19 をコピー</button>
-            </div>
-            <div class="result-block" id="block20">
-                <label>RESULT 20 (20箇所目)</label>
-                <div class="result-box" id="resultText20"></div>
-                <button class="btn-copy btn-blue" id="copyBtn20" onclick="copyResult(20)">✓ RESULT 20 をコピー</button>
-            </div>
-
-            <div class="result-block" id="block21">
-                <label>RESULT 21 (21箇所目)</label>
-                <div class="result-box" id="resultText21"></div>
-                <button class="btn-copy btn-green" id="copyBtn21" onclick="copyResult(21)">✓ RESULT 21 をコピー</button>
-            </div>
-            <div class="result-block" id="block22">
-                <label>RESULT 22 (22箇所目)</label>
-                <div class="result-box" id="resultText22"></div>
-                <button class="btn-copy btn-purple" id="copyBtn22" onclick="copyResult(22)">✓ RESULT 22 をコピー</button>
-            </div>
-            <div class="result-block" id="block23">
-                <label>RESULT 23 (23箇所目)</label>
-                <div class="result-box" id="resultText23"></div>
-                <button class="btn-copy btn-yellow" id="copyBtn23" onclick="copyResult(23)">✓ RESULT 23 をコピー</button>
-            </div>
-            <div class="result-block" id="block24">
-                <label>RESULT 24 (24箇所目)</label>
-                <div class="result-box" id="resultText24"></div>
-                <button class="btn-copy btn-red" id="copyBtn24" onclick="copyResult(24)">✓ RESULT 24 をコピー</button>
-            </div>
-            <div class="result-block" id="block25">
-                <label>RESULT 25 (25箇所目)</label>
-                <div class="result-box" id="resultText25"></div>
-                <button class="btn-copy btn-blue" id="copyBtn25" onclick="copyResult(25)">✓ RESULT 25 をコピー</button>
-            </div>
+            <script>
+                const colors = ['green', 'purple', 'yellow', 'red', 'blue'];
+                let htmlStr = '';
+                for (let i = 1; i <= 25; i++) {
+                    const color = colors[(i - 1) % 5];
+                    htmlStr += `
+                    <div class="result-block" id="block${i}">
+                        <label>RESULT ${i} (${i}箇所目)</label>
+                        <div class="result-box" id="resultText${i}"></div>
+                        <button class="btn-copy btn-${color}" id="copyBtn${i}" onclick="copyResult(${i})">✓ RESULT ${i} をコピー</button>
+                    </div>`;
+                }
+                document.write(htmlStr);
+            </script>
         </div>
     </div>
 
     <script>
-        // 25個分に対応（インデックス1〜25を使用するため、サイズ26で初期化）
         let extractedTexts = Array(26).fill("");
 
         function extractAll() {
             const text = document.getElementById('inputText').value;
-            const start = document.getElementById('startChar').value;
-            const end = document.getElementById('endChar').value;
+            const start1 = document.getElementById('startChar1').value;
+            const end1 = document.getElementById('endChar1').value;
+            const start2 = document.getElementById('startChar2').value;
+            const end2 = document.getElementById('endChar2').value;
             
-            // 1〜25の全ブロックを一旦非表示＆リセット
+            // 画面リセット
             for (let i = 1; i <= 25; i++) {
                 const block = document.getElementById(`block${i}`);
                 const resBox = document.getElementById(`resultText${i}`);
@@ -366,28 +276,52 @@
                 if (resBox) resBox.style.color = "var(--text-main)";
             }
 
-            // 入力チェック
-            if (!text || !start || !end) {
+            // 条件1の入力チェック（最低限、条件1が入っていれば動作）
+            if (!text || !start1 || !end1) {
                 const block1 = document.getElementById('block1');
                 const resBox1 = document.getElementById('resultText1');
                 if (block1 && resBox1) {
                     block1.style.display = "block";
-                    resBox1.textContent = "Error: 入力欄が空欄です。";
+                    resBox1.textContent = "Error: 入力欄（START 1 / END 1）が空欄です。";
                 }
                 return;
             }
 
             let currentPos = 0;
 
-            // 25箇所目までループ処理
             for (let count = 1; count <= 25; count++) {
                 const block = document.getElementById(`block${count}`);
                 const resBox = document.getElementById(`resultText${count}`);
-                
                 if (!block || !resBox) break;
 
-                const startIdx = text.indexOf(start, currentPos);
-                if (startIdx === -1) {
+                // 2つの条件で現在の位置から一番近い「開始文字」を探す
+                let startIdx1 = text.indexOf(start1, currentPos);
+                let startIdx2 = (start2) ? text.indexOf(start2, currentPos) : -1;
+
+                let usePattern = 0; // 1か2、見つからなければ0
+                let startIdx = -1;
+                let activeStart = "";
+                let activeEnd = "";
+
+                // どちらがより手前（最初）に現れるかを判定
+                if (startIdx1 !== -1 && startIdx2 !== -1) {
+                    if (startIdx1 <= startIdx2) {
+                        usePattern = 1;
+                        startIdx = startIdx1;
+                    } else {
+                        usePattern = 2;
+                        startIdx = startIdx2;
+                    }
+                } else if (startIdx1 !== -1) {
+                    usePattern = 1;
+                    startIdx = startIdx1;
+                } else if (startIdx2 !== -1) {
+                    usePattern = 2;
+                    startIdx = startIdx2;
+                }
+
+                // どちらの開始文字も見つからない場合
+                if (usePattern === 0) {
                     if (count === 1) {
                         block.style.display = "block";
                         resBox.textContent = "Error: 開始文字が見つかりません。";
@@ -395,23 +329,34 @@
                     }
                     break;
                 }
+
+                // 使用するパターンの設定
+                if (usePattern === 1) {
+                    activeStart = start1;
+                    activeEnd = end1;
+                } else {
+                    activeStart = start2;
+                    activeEnd = end2;
+                }
                 
-                const searchEndPos = startIdx + start.length;
-                const endIdx = text.indexOf(end, searchEndPos);
+                const searchEndPos = startIdx + activeStart.length;
+                const endIdx = text.indexOf(activeEnd, searchEndPos);
+
+                // 終了文字が見つからない場合
                 if (endIdx === -1) {
                     block.style.display = "block";
-                    resBox.textContent = `Error: ${count}箇所目の終了文字が見つかりません。`;
+                    resBox.textContent = `Error: ${count}箇所目の終了文字（パターン${usePattern}）が見つかりません。`;
                     resBox.style.color = "var(--color-red)";
                     break;
                 }
                 
-                const actualEnd = endIdx + end.length;
+                const actualEnd = endIdx + activeEnd.length;
                 
                 extractedTexts[count] = text.substring(startIdx, actualEnd);
                 resBox.textContent = extractedTexts[count];
                 
                 block.style.display = "block";
-                currentPos = actualEnd;
+                currentPos = actualEnd; // 次の検索開始位置を更新
             }
         }
 
@@ -422,10 +367,7 @@
             navigator.clipboard.writeText(textToCopy).then(() => {
                 btn.classList.add('copied');
                 btn.textContent = `✓ コピー完了！`;
-                
-                setTimeout(() => {
-                    resetBtn(btn, num);
-                }, 2000);
+                setTimeout(() => { resetBtn(btn, num); }, 2000);
             }).catch(err => {
                 alert('Copy failed: ' + err);
             });
