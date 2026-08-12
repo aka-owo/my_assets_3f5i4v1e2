@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>自作 HTML暗号化ツール（完全版）</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 30px auto; padding: 20px; background: #f4f6f8; color: #333; line-height: 1.6; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h2 { margin-top: 0; color: #1a73e8; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 0.95rem; }
+        input[type="file"], input[type="password"] { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background: #fff; }
+        button { width: 100%; background: #1a73e8; color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1557b0; }
+        p { font-size: 0.9rem; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🔒 HTML暗号化ジェネレータ</h2>
+        <p>保護したいHTMLファイルを選び、パスワードを設定してボタンを押してください。スマホ対応・検索避け完備の暗号化ファイルを生成します。</p>
+
+        <div class="form-group">
+            <label>1. 保護したいHTMLファイルを選択</label>
+            <input type="file" id="inputFile" accept=".html,.htm">
+        </div>
+
+        <div class="form-group">
+            <label>2. パスワードを設定</label>
+            <!-- font-size: 16px によりiPhoneでタップした際の自動ズームを防ぎます -->
+            <input type="password" id="password" placeholder="パスワードを入力">
+        </div>
+
+        <button onclick="encryptHTML()">暗号化してHTMLをダウンロード</button>
+    </div>
+
+    <script>
+        async function encryptHTML() {
+            const fileInput = document.getElementById('inputFile');
+            const password = document.getElementById('password').value;
+
+            if (fileInput.files.length === 0 || !password) {
+                alert('ファイルとパスワードの両方を入力してください。');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const htmlContent = await file.text();
+
+            // Web Crypto API (AES-GCM) による暗号化
+            const encoder = new TextEncoder();
+            const salt = window.crypto.getRandomValues(new Uint8Array(16));
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+            const keyMaterial = await window.crypto.subtle.importKey(
+                "raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+            );
+
+            const key = await window.crypto.subtle.deriveKey(
+                { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt"]
+            );
+
+            const encryptedContent = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                encoder.encode(htmlContent)
+            );
+
+            const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedContent)));
+            const saltBase64 = btoa(String.fromCharCode(...salt));
+            const ivBase64 = btoa(String.fromCharCode(...iv));
+
+            // 出力されるテンプレート（レスポンシブ、検索避け、ズーム防止、スマホ最適化）
+            const template = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <!-- スマホ対応・入力時の自動ズーム防止 (maximum-scale=1.0, font-size16px) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 検索避け（ロボットにインデックスさせない・キャッシュさせない） -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <title>Protected Page</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; background: #1a1a1a; color: #fff; 
+            box-sizing: border-box; padding: 20px;
+        }
+        .auth-card { 
+            background: #2a2a2a; padding: 2rem; border-radius: 12px; 
+            text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); 
+            width: 100%; max-width: 340px; box-sizing: border-box;
+        }
+        h3 { margin-top: 0; font-size: 1.25rem; }
+        p { font-size: 0.85rem; color: #aaa; }
+        input[type="password"] { 
+            width: 100%; padding: 12px; margin: 15px 0; box-sizing: border-box; 
+            background: #111; border: 1px solid #444; color: #fff; 
+            border-radius: 8px; font-size: 16px; /* スマホの自動ズーム防止に必須 */
+        }
+        input[type="password"]:focus { outline: none; border-color: #28a745; }
+        button { 
+            width: 100%; padding: 12px; background: #28a745; color: white; 
+            border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold;
+        }
+        button:active { background: #218838; }
+        #error { color: #ff6b6b; margin-top: 12px; font-size: 0.85rem; min-height: 1.2em; }
+    </style>
+</head>
+<body>
+    <div id="auth-box" class="auth-card">
+        <h3>🔒 Protected Page</h3>
+        <p>パスワードを入力してください</p>
+        <input type="password" id="pass" placeholder="Password" inputmode="text">
+        <button onclick="decryptAndShow()">解除</button>
+        <div id="error"></div>
+    </div>
+
+    <script>
+        const encData = "${encryptedBase64}";
+        const saltData = "${saltBase64}";
+        const ivData = "${ivBase64}";
+
+        function base64ToUint8(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes;
+        }
+
+        async function decryptAndShow() {
+            const password = document.getElementById('pass').value;
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = "";
+
+            if (!password) {
+                errorDiv.textContent = "パスワードを入力してください";
+                return;
+            }
+
+            try {
+                const encoder = new TextEncoder();
+                const salt = base64ToUint8(saltData);
+                const iv = base64ToUint8(ivData);
+                const data = base64ToUint8(encData);
+
+                const keyMaterial = await window.crypto.subtle.importKey(
+                    "raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+                );
+                const key = await window.crypto.subtle.deriveKey(
+                    { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+                    keyMaterial,
+                    { name: "AES-GCM", length: 256 },
+                    false,
+                    ["decrypt"]
+                );
+
+                const decrypted = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    data
+                );
+
+                const html = new TextDecoder().decode(decrypted);
+                document.open();
+                document.write(html);
+                document.close();
+            } catch (e) {
+                errorDiv.textContent = "パスワードが間違っています";
+            }
+        }
+
+        // Enterキーでも解除できるようにする
+        document.getElementById('pass').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                decryptAndShow();
+            }
+        });
+    </script>
+</body>
+</html>`;
+
+            const blob = new Blob([template], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'protected.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
