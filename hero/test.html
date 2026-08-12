@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>自作 HTML暗号化ツール（完全修正版）</title>
+    <!-- 検索避けを完全に完備 -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+    <title>自作 HTML暗号化ジェネレータ</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 30px auto; padding: 20px; background: #f4f6f8; color: #333; line-height: 1.6; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h2 { margin-top: 0; color: #1a73e8; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 0.95rem; }
-        input[type="file"], input[type="password"] { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background: #fff; }
+        input[type="file"], input[type="password"], select { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background: #fff; }
         button { width: 100%; background: #1a73e8; color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
         button:hover { background: #1557b0; }
         p { font-size: 0.9rem; color: #666; }
@@ -20,11 +23,11 @@
 
     <div class="card">
         <h2>🔒 HTML暗号化ジェネレータ</h2>
-        <p>保護したいHTMLファイルを選び、パスワードを設定してボタンを押してください。</p>
+        <p>保護したいHTMLファイルを選び、設定を選んで暗号化ファイルを生成します。</p>
 
         <div class="form-group">
             <label>1. 保護したいHTMLファイルを選択</label>
-            <input type="file" id="inputFile" accept=".html,.htm">
+            <input type="file" id="inputFile" accept=".html,.htm,.txt">
         </div>
 
         <div class="form-group">
@@ -32,13 +35,22 @@
             <input type="password" id="password" placeholder="パスワードを入力">
         </div>
 
-        <button onclick="encryptHTML()">暗号化してHTMLをダウンロード</button>
+        <div class="form-group">
+            <label>3. 保存形式を選択</label>
+            <select id="fileExtension">
+                <option value="html">HTMLファイル (.html)</option>
+                <option value="txt">テキストファイル (.txt)</option>
+            </select>
+        </div>
+
+        <button onclick="encryptHTML()">暗号化ファイルをダウンロード</button>
     </div>
 
     <script>
         async function encryptHTML() {
             const fileInput = document.getElementById('inputFile');
             const password = document.getElementById('password').value;
+            const extension = document.getElementById('fileExtension').value;
 
             if (fileInput.files.length === 0 || !password) {
                 alert('ファイルとパスワードの両方を入力してください。');
@@ -74,14 +86,14 @@
             const saltBase64 = btoa(String.fromCharCode(...salt));
             const ivBase64 = btoa(String.fromCharCode(...iv));
 
-            // 出力するテンプレート（タグの誤認を防ぐため </ を <\/ にエスケープしています）
             const templateParts = [
                 '<!DOCTYPE html>\n',
                 '<html lang="ja">\n',
                 '<head>\n',
                 '    <meta charset="UTF-8">\n',
                 '    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n',
-                '    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">\n',
+                '    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">\n',
+                '    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">\n',
                 '    <title>Protected Page</title>\n',
                 '    <style>\n',
                 '        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #1a1a1a; color: #fff; box-sizing: border-box; padding: 20px; }\n',
@@ -147,11 +159,12 @@
 
             const template = templateParts.join('');
 
-            const blob = new Blob([template], { type: 'text/html' });
+            // 拡張子を切り替えてダウンロード（.txt の場合も中身は実行可能なHTMLコードになります）
+            const blob = new Blob([template], { type: extension === 'txt' ? 'text/plain' : 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'protected.html';
+            a.download = 'protected.' + extension;
             a.click();
             URL.revokeObjectURL(url);
         }
