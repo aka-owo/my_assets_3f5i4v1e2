@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>自作 HTML暗号化ツール（完全版）</title>
+    <title>自作 HTML暗号化ツール（修正版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 30px auto; padding: 20px; background: #f4f6f8; color: #333; line-height: 1.6; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -20,7 +20,7 @@
 
     <div class="card">
         <h2>🔒 HTML暗号化ジェネレータ</h2>
-        <p>保護したいHTMLファイルを選び、パスワードを設定してボタンを押してください。スマホ対応・検索避け完備の暗号化ファイルを生成します。</p>
+        <p>保護したいHTMLファイルを選び、パスワードを設定してボタンを押してください。</p>
 
         <div class="form-group">
             <label>1. 保護したいHTMLファイルを選択</label>
@@ -29,7 +29,6 @@
 
         <div class="form-group">
             <label>2. パスワードを設定</label>
-            <!-- font-size: 16px によりiPhoneでタップした際の自動ズームを防ぎます -->
             <input type="password" id="password" placeholder="パスワードを入力">
         </div>
 
@@ -49,7 +48,6 @@
             const file = fileInput.files[0];
             const htmlContent = await file.text();
 
-            // Web Crypto API (AES-GCM) による暗号化
             const encoder = new TextEncoder();
             const salt = window.crypto.getRandomValues(new Uint8Array(16));
             const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -76,14 +74,13 @@
             const saltBase64 = btoa(String.fromCharCode(...salt));
             const ivBase64 = btoa(String.fromCharCode(...iv));
 
-            // 出力されるテンプレート（レスポンシブ、検索避け、ズーム防止、スマホ最適化）
-            const template = `<!DOCTYPE html>
+            // 出力するHTMLのテンプレート文字列
+            const template = 
+`<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <!-- スマホ対応・入力時の自動ズーム防止 (maximum-scale=1.0, font-size16px) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 検索避け（ロボットにインデックスさせない・キャッシュさせない） -->
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title>Protected Page</title>
     <style>
@@ -103,7 +100,7 @@
         input[type="password"] { 
             width: 100%; padding: 12px; margin: 15px 0; box-sizing: border-box; 
             background: #111; border: 1px solid #444; color: #fff; 
-            border-radius: 8px; font-size: 16px; /* スマホの自動ズーム防止に必須 */
+            border-radius: 8px; font-size: 16px; 
         }
         input[type="password"]:focus { outline: none; border-color: #28a745; }
         button { 
@@ -118,15 +115,15 @@
     <div id="auth-box" class="auth-card">
         <h3>🔒 Protected Page</h3>
         <p>パスワードを入力してください</p>
-        <input type="password" id="pass" placeholder="Password" inputmode="text">
+        <input type="password" id="pass" placeholder="Password">
         <button onclick="decryptAndShow()">解除</button>
         <div id="error"></div>
     </div>
 
     <script>
-        const encData = "${encryptedBase64}";
-        const saltData = "${saltBase64}";
-        const ivData = "${ivBase64}";
+        const encData = "` + encryptedBase64 + `";
+        const saltData = "` + saltBase64 + `";
+        const ivData = "` + ivBase64 + `";
 
         function base64ToUint8(base64) {
             const binary = atob(base64);
@@ -177,7 +174,6 @@
             }
         }
 
-        // Enterキーでも解除できるようにする
         document.getElementById('pass').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 decryptAndShow();
