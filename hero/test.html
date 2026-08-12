@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>自作 HTML暗号化ツール（修正版）</title>
+    <title>自作 HTML暗号化ツール（完全修正版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 30px auto; padding: 20px; background: #f4f6f8; color: #333; line-height: 1.6; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -74,9 +74,8 @@
             const saltBase64 = btoa(String.fromCharCode(...salt));
             const ivBase64 = btoa(String.fromCharCode(...iv));
 
-            // 出力するHTMLのテンプレート文字列
-            const template = 
-`<!DOCTYPE html>
+            // 出力するHTMLテンプレート（暗号化データを正しく埋め込む構造）
+            const template = `<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -121,9 +120,9 @@
     </div>
 
     <script>
-        const encData = "` + encryptedBase64 + `";
-        const saltData = "` + saltBase64 + `";
-        const ivData = "` + ivBase64 + `";
+        const encData = "${encryptedBase64}";
+        const saltData = "${saltBase64}";
+        const ivData = "${ivBase64}";
 
         function base64ToUint8(base64) {
             const binary = atob(base64);
