@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>自作 HTML暗号化ツール（完全解決版）</title>
+    <title>自作 HTML暗号化ツール（エラー完全修正版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 30px auto; padding: 20px; background: #f4f6f8; color: #333; line-height: 1.6; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -74,75 +74,78 @@
             const saltBase64 = btoa(String.fromCharCode(...salt));
             const ivBase64 = btoa(String.fromCharCode(...iv));
 
-            // 文字列結合方式（バックティックの競合を完全に回避）
-            const template = 
-                '<!DOCTYPE html>\n' +
-                '<html lang="ja">\n' +
-                '<head>\n' +
-                '    <meta charset="UTF-8">\n' +
-                '    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n' +
-                '    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">\n' +
-                '    <title>Protected Page</title>\n' +
-                '    <style>\n' +
-                '        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #1a1a1a; color: #fff; box-sizing: border-box; padding: 20px; }\n' +
-                '        .auth-card { background: #2a2a2a; padding: 2rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); width: 100%; max-width: 340px; box-sizing: border-box; }\n' +
-                '        h3 { margin-top: 0; font-size: 1.25rem; }\n' +
-                '        p { font-size: 0.85rem; color: #aaa; }\n' +
-                '        input[type="password"] { width: 100%; padding: 12px; margin: 15px 0; box-sizing: border-box; background: #111; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 16px; }\n' +
-                '        input[type="password"]:focus { outline: none; border-color: #28a745; }\n' +
-                '        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; }\n' +
-                '        button:active { background: #218838; }\n' +
-                '        #error { color: #ff6b6b; margin-top: 12px; font-size: 0.85rem; min-height: 1.2em; }\n' +
-                '    </style>\n' +
-                '</head>\n' +
-                '<body>\n' +
-                '    <div id="auth-box" class="auth-card">\n' +
-                '        <h3>🔒 Protected Page</h3>\n' +
-                '        <p>パスワードを入力してください</p>\n' +
-                '        <input type="password" id="pass" placeholder="Password">\n' +
-                '        <button onclick="decryptAndShow()">解除</button>\n' +
-                '        <div id="error"></div>\n' +
-                '    </div>\n' +
-                '    <script>\n' +
-                '        const encData = "' + encryptedBase64 + '";\n' +
-                '        const saltData = "' + saltBase64 + '";\n' +
-                '        const ivData = "' + ivBase64 + '";\n' +
-                '        function base64ToUint8(base64) {\n' +
-                '            const binary = atob(base64);\n' +
-                '            const bytes = new Uint8Array(binary.length);\n' +
-                '            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);\n' +
-                '            return bytes;\n' +
-                '        }\n' +
-                '        async function decryptAndShow() {\n' +
-                '            const password = document.getElementById("pass").value;\n' +
-                '            const errorDiv = document.getElementById("error");\n' +
-                '            errorDiv.textContent = "";\n' +
-                '            if (!password) {\n' +
-                '                errorDiv.textContent = "パスワードを入力してください";\n' +
-                '                return;\n' +
-                '            }\n' +
-                '            try {\n' +
-                '                const encoder = new TextEncoder();\n' +
-                '                const salt = base64ToUint8(saltData);\n' +
-                '                const iv = base64ToUint8(ivData);\n' +
-                '                const data = base64ToUint8(encData);\n' +
-                '                const keyMaterial = await window.crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);\n' +
-                '                const key = await window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);\n' +
-                '                const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, data);\n' +
-                '                const html = new TextDecoder().decode(decrypted);\n' +
-                '                document.open();\n' +
-                '                document.write(html);\n' +
-                '                document.close();\n' +
-                '            } catch (e) {\n' +
-                '                errorDiv.textContent = "パスワードが間違っています";\n' +
-                '            }\n' +
-                '        }\n' +
-                '        document.getElementById("pass").addEventListener("keypress", function (e) {\n' +
-                '            if (e.key === "Enter") { decryptAndShow(); }\n' +
-                '        });\n' +
-                '    </script>\n' +
-                '</body>\n' +
-                '</html>';
+            // 配列を使った安全なテンプレート構築（構文エラーを防止）
+            const templateParts = [
+                '<!DOCTYPE html>\n',
+                '<html lang="ja">\n',
+                '<head>\n',
+                '    <meta charset="UTF-8">\n',
+                '    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n',
+                '    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">\n',
+                '    <title>Protected Page</title>\n',
+                '    <style>\n',
+                '        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #1a1a1a; color: #fff; box-sizing: border-box; padding: 20px; }\n',
+                '        .auth-card { background: #2a2a2a; padding: 2rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); width: 100%; max-width: 340px; box-sizing: border-box; }\n',
+                '        h3 { margin-top: 0; font-size: 1.25rem; }\n',
+                '        p { font-size: 0.85rem; color: #aaa; }\n',
+                '        input[type="password"] { width: 100%; padding: 12px; margin: 15px 0; box-sizing: border-box; background: #111; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 16px; }\n',
+                '        input[type="password"]:focus { outline: none; border-color: #28a745; }\n',
+                '        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; }\n',
+                '        button:active { background: #218838; }\n',
+                '        #error { color: #ff6b6b; margin-top: 12px; font-size: 0.85rem; min-height: 1.2em; }\n',
+                '    </style>\n',
+                '</head>\n',
+                '<body>\n',
+                '    <div id="auth-box" class="auth-card">\n',
+                '        <h3>🔒 Protected Page</h3>\n',
+                '        <p>パスワードを入力してください</p>\n',
+                '        <input type="password" id="pass" placeholder="Password">\n',
+                '        <button onclick="decryptAndShow()">解除</button>\n',
+                '        <div id="error"></div>\n',
+                '    </div>\n',
+                '    <script>\n',
+                '        const encData = "' + encryptedBase64 + '";\n',
+                '        const saltData = "' + saltBase64 + '";\n',
+                '        const ivData = "' + ivBase64 + '";\n',
+                '        function base64ToUint8(base64) {\n',
+                '            const binary = atob(base64);\n',
+                '            const bytes = new Uint8Array(binary.length);\n',
+                '            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);\n',
+                '            return bytes;\n',
+                '        }\n',
+                '        async function decryptAndShow() {\n',
+                '            const password = document.getElementById("pass").value;\n',
+                '            const errorDiv = document.getElementById("error");\n',
+                '            errorDiv.textContent = "";\n',
+                '            if (!password) {\n',
+                '                errorDiv.textContent = "パスワードを入力してください";\n',
+                '                return;\n',
+                '            }\n',
+                '            try {\n',
+                '                const encoder = new TextEncoder();\n',
+                '                const salt = base64ToUint8(saltData);\n',
+                '                const iv = base64ToUint8(ivData);\n',
+                '                const data = base64ToUint8(encData);\n',
+                '                const keyMaterial = await window.crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);\n',
+                '                const key = await window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);\n',
+                '                const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, data);\n',
+                '                const html = new TextDecoder().decode(decrypted);\n',
+                '                document.open();\n',
+                '                document.write(html);\n',
+                '                document.close();\n',
+                '            } catch (e) {\n',
+                '                errorDiv.textContent = "パスワードが間違っています";\n',
+                '            }\n',
+                '        }\n',
+                '        document.getElementById("pass").addEventListener("keypress", function (e) {\n',
+                '            if (e.key === "Enter") { decryptAndShow(); }\n',
+                '        });\n',
+                '    </script>\n',
+                '</body>\n',
+                '</html>'
+            ];
+
+            const template = templateParts.join('');
 
             const blob = new Blob([template], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
