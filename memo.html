@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
+    <title>おでかけメモ帳</title>
+    <!-- FontAwesome読み込み（アイコン用） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- マークダウン変換ライブラリ (marked.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --col-ext-green: #70A940;
+            --col-ext-purple: #846E9D;
+            --col-ext-yellow: #E6B101;
+            --col-ext-red: #CF5758;
+            --col-ext-blue: #8AABCC;
+            --current-theme: var(--col-ext-yellow); /* デフォルトは黄色に固定 */
+            --border-color: #e9ecef;
+        }
+
+        .secure-memo-app * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(180deg, #ffffff 0%, #fffdf4 40%, #fef3c7 100%);
+            background-attachment: fixed;
+            color: #333;
+            min-height: 100vh;
+            padding: 8px 4px 70px 4px;
+        }
+
+        .secure-memo-app {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .workspace-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .secure-memo-card {
+            width: 100%;
+            border-radius: 14px;
+            padding: 15px 10px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        /* ----- Safariで開くボタンのスタイル ----- */
+        #safari-open-container {
+            display: none; /* デフォルトは非表示（JSでアプリ判定時に表示） */
+            margin-bottom: 10px;
+            text-align: right;
+        }
+        #safari-open-btn {
+            background-color: #334155;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        /* ----- タイトル入力/表示部分のスタイル ----- */
+        .section-heading {
+            position: relative;
+            padding-bottom: 10px;
+            margin: 0 0 15px 0;
+            text-align: center;
+        }
+        .section-heading::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 5%;
+            width: 90%;
+            height: 5px;
+            background: linear-gradient(to right, var(--col-ext-green) 0% 20%, var(--col-ext-purple) 20% 40%, var(--col-ext-yellow) 40% 60%, var(--col-ext-blue) 60% 80%, var(--col-ext-red) 80% 100%);
+            border-radius: 3px;
+        }
+        #memo-title-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: center;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: #333;
+            outline: none;
+            font-family: inherit;
+            padding: 2px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        #memo-title-input:focus {
+            background: rgba(0, 0, 0, 0.04);
+        }
+        #memo-title-input::placeholder {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        #memo-title-display {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: #333;
+            padding: 2px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-uniform button {
+            flex: 1;
+            min-width: 52px;
+            padding: 8px 2px;
+            font-size: 0.72rem;
+            background-color: #475569;
+            border-radius: 8px;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .toolbar-uniform button.active {
+            background-color: var(--current-theme);
+            color: #fff;
+        }
+
+        .btn-theme-1 { background-color: var(--col-ext-green) !important; }
+        .btn-theme-2 { background-color: var(--col-ext-purple) !important; }
+        .btn-theme-3 { background-color: var(--col-ext-yellow) !important; }
+        .btn-theme-4 { background-color: var(--col-ext-blue) !important; }
+        .btn-theme-5 { background-color: var(--col-ext-red) !important; }
+
+        .theme-active {
+            outline: 3px solid #1e293b;
+            outline-offset: 2px;
+        }
+
+        /* 編集エリア・プレビューエリア */
+        textarea#memo-textarea {
+            width: 100%;
+            font-size: 16px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background-color: #fcfcfc;
+            color: #2b2b2b;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: all 0.25s ease;
+            box-sizing: border-box;
+            height: 55vh;
+            resize: none;
+            font-family: inherit;
+        }
+        textarea#memo-textarea:focus {
+            outline: none;
+            border-color: var(--current-theme);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(230, 177, 1, 0.15);
+        }
+
+        .preview-pane, .help-content {
+            width: 100%;
+            height: 55vh;
+            background-color: #fcfcfc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            color: #2b2b2b;
+            transition: height 0.3s ease;
+        }
+        .preview-pane {
+            font-size: 16px;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+        /* プレビュー時はツールバーが消える分、表示領域を広げる */
+        .pane-expanded {
+            height: 65vh !important;
+        }
+
+        .preview-pane ul, .preview-pane ol {
+            list-style: none;
+            padding-left: 20px;
+            margin: 4px 0;
+        }
+        .preview-pane li {
+            margin-bottom: 6px;
+        }
+
+        .help-content {
+            font-size: 0.82rem;
+            line-height: 1.45;
+            color: #475569;
+        }
+        .help-content h4 {
+            font-size: 0.9rem;
+            color: #1e293b;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+        .help-content h4:first-child {
+            margin-top: 0;
+        }
+        .help-content p {
+            margin-bottom: 8px;
+        }
+        .help-content ul {
+            padding-left: 18px;
+            margin: 6px 0 8px 0;
+        }
+        .help-content li {
+            margin-bottom: 4px;
+        }
+        .help-content code {
+            background-color: #f1f3f5;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #d63384;
+        }
+
+        .btn-main {
+            display: flex;
+            flex: 1;
+            padding: 12px;
+            background-color: var(--current-theme);
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .btn-main:active {
+            transform: scale(0.98);
+        }
+        .btn-left-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-theme-bg {
+            background-color: var(--current-theme) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        .btn-success {
+            background-color: var(--col-ext-green) !important;
+            box-shadow: 0 4px 12px rgba(112, 169, 64, 0.2) !important;
+        }
+        .btn-danger-subtle {
+            background-color: #64748b !important;
+            padding: 8px 10px;
+            font-size: 0.78rem;
+            border-radius: 8px;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+
+        .error-msg {
+            color: var(--col-ext-red);
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        /* 共有コード表示エリア */
+        .share-code-box {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 6px 10px;
+        }
+        .share-code-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            font-size: 0.8rem;
+            color: #475569;
+            outline: none;
+            font-family: monospace;
+            padding: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* モーダル */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            text-align: left;
+            width: 92%;
+            max-width: 400px;
+        }
+        .modal-content h3 {
+            font-size: 1.15rem;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            font-weight: 700;
+            text-align: center;
+        }
+        .modal-content p {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .modal-content .btn-auth-final {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--current-theme);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="secure-memo-app">
+    <!-- コード読み込み用モーダル -->
+    <div id="load-code-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>コード読み込み</h3>
+            <p>共有されたコードを入力してください。</p>
+            <div style="margin-bottom: 10px;">
+                <textarea id="load-code-textarea" placeholder="例: eyJ0... またはハッシュ全体" style="height: 90px; font-size: 13px; resize: none; background: #fcfcfc;"></textarea>
+            </div>
+            <div id="load-error-msg" class="error-msg"></div>
+            <button type="button" id="execute-load-btn" class="btn-auth-final">このメモを開く</button>
+            <button type="button" id="close-load-modal-btn" style="background: #64748b; margin-top: 8px;" class="btn-auth-final">キャンセル</button>
+        </div>
+    </div>
+
+    <div id="editor-screen" class="workspace-container">
+        <div class="secure-memo-card">
+            
+            <!-- ホーム画面追加時専用のSafariで開くボタン -->
+            <div id="safari-open-container">
+                <button type="button" id="safari-open-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariへ🌐</button>
+            </div>
+
+            <!-- 編集可能なタイトルエリア -->
+            <div class="section-heading">
+                <input type="text" id="memo-title-input" value="おでかけメモ帳" placeholder="タイトルを入力">
+                <span id="memo-title-display" class="hidden"></span>
+            </div>
+            
+            <div class="toolbar toolbar-uniform">
+                <button type="button" id="tab-edit" class="active">編集</button>
+                <button type="button" id="tab-preview">プレビュー</button>
+                <button type="button" id="tab-help">ヘルプ</button>
+                <button type="button" id="add-check-btn">+チェック</button>
+                <button type="button" id="clear-check-btn">チェック消</button>
+                <button type="button" id="timestamp-btn">日時</button>
+                <button type="button" id="load-code-btn" style="background-color: #334155;">コード読込</button>
+            </div>
+
+            <!-- 5人のメンバーカラー切替ツールバー（プレビュー時は非表示になる対象） -->
+            <div class="toolbar" id="theme-toolbar" style="margin-top: 6px; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 0.78rem; font-weight: 600; color: #6c757d; margin-right: 2px;">テーマ:</span>
+                    <button type="button" id="theme-1" class="btn-theme-1" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="緑メンバー"><i class="fa-solid fa-crown"></i></button>
+                    <button type="button" id="theme-2" class="btn-theme-2" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="紫メンバー"><i class="fa-solid fa-crown"></i></button>
+                    <button type="button" id="theme-3" class="btn-theme-3 theme-active" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="黄色メンバー（デフォルト）"><i class="fa-solid fa-crown"></i></button>
+                    <button type="button" id="theme-4" class="btn-theme-4" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="青メンバー"><i class="fa-solid fa-crown"></i></button>
+                    <button type="button" id="theme-5" class="btn-theme-5" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="赤メンバー"><i class="fa-solid fa-crown"></i></button>
+                </div>
+                <div>
+                    <button type="button" id="clear-all-btn" class="btn-danger-subtle">全消去</button>
+                </div>
+            </div>
+            
+            <textarea id="memo-textarea" placeholder="ここにマークダウンやメモを入力...&#10;- [ ] 親項目&#10;  - [ ] 子項目"></textarea>
+            <div id="preview-pane" class="preview-pane hidden"></div>
+            <div id="help-pane" class="help-content hidden">
+                <h4>📝 チェックリストの使い方</h4>
+                <ul>
+                    <li><code>- [ ] 項目名</code> の形式で書くとチェックボックスになります。</li>
+                    <li>プレビュー画面の王冠アイコンをクリックしてON/OFFが可能です。</li>
+                </ul>
+                <h4>🔗 共有とコード読込</h4>
+                <p>メモの内容はリアルタイムで下部の「共有用コード」に反映されます。「コードコピー」ボタンでコードをコピーして他の人に共有できます。受け取った人は「コード読込」から貼り付けて開くことができます。</p>
+                <h4>📖 マークダウン記法</h4>
+                <ul>
+                    <li><code># 見出し1</code>：大きな見出し</li>
+                    <li><code>**太字**</code>：文字を太く表示</li>
+                    <li><code>- リスト</code>：箇条書き項目</li>
+                </ul>
+            </div>
+
+            <!-- リアルタイムコード表示＆コピーエリア -->
+            <div class="button-group">
+                <div class="share-code-box">
+                    <input type="text" id="share-code-input" class="share-code-input" readonly placeholder="ここにコードがリアルタイム表示されます">
+                    <button type="button" id="copy-code-btn" class="btn-main btn-theme-bg" style="flex: 0 0 auto; padding: 6px 12px; font-size: 0.78rem;">
+                        <span class="btn-left-content"><i class="fa-solid fa-copy"></i>コードコピー</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const memoTitleInput = document.getElementById('memo-title-input');
+const memoTitleDisplay = document.getElementById('memo-title-display');
+const themeToolbar = document.getElementById('theme-toolbar');
+
+const memoTextarea = document.getElementById('memo-textarea');
+const previewPane = document.getElementById('preview-pane');
+const helpPane = document.getElementById('help-pane');
+const tabEdit = document.getElementById('tab-edit');
+const tabPreview = document.getElementById('tab-preview');
+const tabHelp = document.getElementById('tab-help');
+
+const addCheckBtn = document.getElementById('add-check-btn');
+const clearCheckBtn = document.getElementById('clear-check-btn');
+const timestampBtn = document.getElementById('timestamp-btn');
+const clearAllBtn = document.getElementById('clear-all-btn');
+
+const shareCodeInput = document.getElementById('share-code-input');
+const copyCodeBtn = document.getElementById('copy-code-btn');
+
+const loadCodeBtn = document.getElementById('load-code-btn');
+const loadCodeModal = document.getElementById('load-code-modal');
+const loadCodeTextarea = document.getElementById('load-code-textarea');
+const executeLoadBtn = document.getElementById('execute-load-btn');
+const closeLoadModalBtn = document.getElementById('close-load-modal-btn');
+const loadErrorMsg = document.getElementById('load-error-msg');
+
+// --- 追加：ホーム画面アプリモード（スタンドアロン）のときだけ「Safariで開く」を表示 ---
+const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+if (isInStandaloneMode) {
+    const safariContainer = document.getElementById('safari-open-container');
+    const safariBtn = document.getElementById('safari-open-btn');
+    safariContainer.style.display = 'block';
+
+    safariBtn.addEventListener('click', () => {
+        // 現在のURL（ハッシュつき）をそのままSafariに引き渡す
+        window.location.href = window.location.href;
+    });
+}
+
+// 起動時にURLハッシュからデータをデコードして復元
+window.addEventListener('DOMContentLoaded', () => {
+    loadFromHash(window.location.hash.substring(1));
+    updateShareCode();
+});
+
+// ハッシュからの読み込み（旧バージョンの単なるテキストデータにも対応）
+function loadFromHash(hashStr) {
+    if (!hashStr) return;
+    try {
+        let cleanHash = hashStr.trim();
+        if (cleanHash.includes('#')) {
+            cleanHash = cleanHash.split('#')[1];
+        }
+        const decoded = decodeURIComponent(escape(window.atob(cleanHash)));
+        
+        try {
+            // JSON形式（タイトル＋本文）のパースを試みる
+            const data = JSON.parse(decoded);
+            memoTitleInput.value = data.t || "";
+            memoTextarea.value = data.c || "";
+        } catch(e) {
+            // 旧バージョンのハッシュだった場合は本文として扱う
+            memoTitleInput.value = "おでかけメモ帳";
+            memoTextarea.value = decoded;
+        }
+        
+        window.location.hash = cleanHash;
+        updateShareCode();
+        return true;
+    } catch (e) {
+        try {
+            let cleanHash = hashStr.trim();
+            if (cleanHash.includes('#')) {
+                cleanHash = cleanHash.split('#')[1];
+            }
+            const decodedStr = decodeURIComponent(cleanHash);
+            
+            try {
+                const data = JSON.parse(decodedStr);
+                memoTitleInput.value = data.t || "";
+                memoTextarea.value = data.c || "";
+            } catch(e) {
+                memoTitleInput.value = "おでかけメモ帳";
+                memoTextarea.value = decodedStr;
+            }
+            
+            window.location.hash = cleanHash;
+            updateShareCode();
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+}
+
+// リアルタイムでコード（ハッシュ）を生成してテキストボックスに反映
+function updateShareCode() {
+    const text = memoTextarea.value;
+    const title = memoTitleInput.value;
+    
+    if (!text && (!title || title === "おでかけメモ帳")) {
+        shareCodeInput.value = "";
+        window.location.hash = "";
+        return;
+    }
+    
+    try {
+        // タイトルと本文をJSONでまとめる
+        const data = { t: title, c: text };
+        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+        shareCodeInput.value = encoded;
+        window.location.hash = encoded;
+    } catch (e) {
+        shareCodeInput.value = "";
+    }
+}
+
+memoTitleInput.addEventListener('input', updateShareCode);
+memoTextarea.addEventListener('input', updateShareCode);
+
+// テーマ切替
+const themes = {
+    'theme-1': 'var(--col-ext-green)',
+    'theme-2': 'var(--col-ext-purple)',
+    'theme-3': 'var(--col-ext-yellow)',
+    'theme-4': 'var(--col-ext-blue)',
+    'theme-5': 'var(--col-ext-red)'
+};
+
+Object.keys(themes).forEach(themeId => {
+    document.getElementById(themeId).addEventListener('click', () => {
+        document.documentElement.style.setProperty('--current-theme', themes[themeId]);
+        document.querySelectorAll('[id^="theme-"]').forEach(btn => btn.classList.remove('theme-active'));
+        document.getElementById(themeId).classList.add('theme-active');
+    });
+});
+
+// タブ切り替え（編集 / プレビュー / ヘルプ）
+tabEdit.addEventListener('click', () => {
+    tabEdit.classList.add('active');
+    tabPreview.classList.remove('active');
+    tabHelp.classList.remove('active');
+    
+    // タイトル表示切替
+    memoTitleInput.classList.remove('hidden');
+    memoTitleDisplay.classList.add('hidden');
+    
+    // 隠していたボタンを再表示
+    tabPreview.classList.remove('hidden');
+    tabHelp.classList.remove('hidden');
+    addCheckBtn.classList.remove('hidden');
+    clearCheckBtn.classList.remove('hidden');
+    timestampBtn.classList.remove('hidden');
+    loadCodeBtn.classList.remove('hidden');
+    themeToolbar.classList.remove('hidden');
+
+    memoTextarea.classList.remove('hidden');
+    previewPane.classList.remove('pane-expanded');
+    previewPane.classList.add('hidden');
+    helpPane.classList.add('hidden');
+});
+
+tabPreview.addEventListener('click', () => {
+    tabPreview.classList.add('active');
+    tabEdit.classList.remove('active');
+    tabHelp.classList.remove('active');
+    
+    // タイトル表示切替（入力不可にする）
+    memoTitleDisplay.textContent = memoTitleInput.value || "タイトル未設定";
+    memoTitleInput.classList.add('hidden');
+    memoTitleDisplay.classList.remove('hidden');
+    
+    // 不要なボタンを非表示にしてスッキリさせる
+    tabPreview.classList.add('hidden');
+    tabHelp.classList.add('hidden');
+    addCheckBtn.classList.add('hidden');
+    clearCheckBtn.classList.add('hidden');
+    timestampBtn.classList.add('hidden');
+    loadCodeBtn.classList.add('hidden');
+    themeToolbar.classList.add('hidden');
+
+    updatePreview();
+    memoTextarea.classList.add('hidden');
+    previewPane.classList.remove('hidden');
+    previewPane.classList.add('pane-expanded'); // 高さを広げる
+    helpPane.classList.add('hidden');
+});
+
+tabHelp.addEventListener('click', () => {
+    tabHelp.classList.add('active');
+    tabEdit.classList.remove('active');
+    tabPreview.classList.remove('active');
+
+    // タイトル表示切替
+    memoTitleDisplay.textContent = "ヘルプ・使い方";
+    memoTitleInput.classList.add('hidden');
+    memoTitleDisplay.classList.remove('hidden');
+
+    // 不要なボタンを非表示
+    tabPreview.classList.add('hidden');
+    tabHelp.classList.add('hidden');
+    addCheckBtn.classList.add('hidden');
+    clearCheckBtn.classList.add('hidden');
+    timestampBtn.classList.add('hidden');
+    loadCodeBtn.classList.add('hidden');
+    themeToolbar.classList.add('hidden');
+
+    memoTextarea.classList.add('hidden');
+    previewPane.classList.add('hidden');
+    helpPane.classList.remove('hidden');
+    helpPane.classList.add('pane-expanded');
+});
+
+// プレビューの王冠・チェックボックス連動
+function updatePreview() {
+    const text = memoTextarea.value;
+    const lines = text.split('\n');
+    let processedLines = [];
+    
+    lines.forEach((line, index) => {
+        const listCheckMatch = line.match(/^([\s\u3000]*)([-*])\s+\[([ xX])\]\s+(.*)$/);
+        
+        if (listCheckMatch) {
+            const indent = listCheckMatch[1];
+            const bullet = listCheckMatch[2];
+            const checkState = listCheckMatch[3];
+            const content = listCheckMatch[4];
+            const checked = checkState.toLowerCase() === 'x';
+            
+            const crownColor = checked ? 'var(--current-theme)' : '#cbd5e1';
+            const htmlItem = `${indent}${bullet} <span class="preview-crown-toggle" data-line-index="${index}" style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:2px 4px;"><i class="fa-solid fa-crown" style="color: ${crownColor}; font-size: 1rem; transition: color 0.2s;"></i><span style="${checked ? 'text-decoration:line-through; color:#94a3b8;' : ''}">${content}</span></span>`;
+            processedLines.push(htmlItem);
+        } else {
+            processedLines.push(line);
+        }
+    });
+
+    previewPane.innerHTML = marked.parse(processedLines.join('\n'));
+
+    previewPane.querySelectorAll('.preview-crown-toggle').forEach(element => {
+        const toggleAction = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const lineIndex = parseInt(element.getAttribute('data-line-index'));
+            
+            const allLines = memoTextarea.value.split('\n');
+            if (allLines[lineIndex] !== undefined) {
+                const currentLine = allLines[lineIndex];
+                const match = currentLine.match(/^([\s\u3000]*)([-*])\s+\[([ xX])\]\s+(.*)$/);
+                if (match) {
+                    const isCurrentlyChecked = match[3].toLowerCase() === 'x';
+                    const newCheckState = isCurrentlyChecked ? ' ' : 'x';
+                    allLines[lineIndex] = currentLine.replace(/(\[[ xX]\])/, `[${newCheckState}]`);
+                    memoTextarea.value = allLines.join('\n');
+                    updateShareCode();
+                    updatePreview();
+                }
+            }
+        };
+
+        element.addEventListener('click', toggleAction);
+        element.addEventListener('touchend', toggleAction);
+    });
+}
+
+// コード読み込みモーダルの制御
+loadCodeBtn.addEventListener('click', () => {
+    loadCodeTextarea.value = "";
+    loadErrorMsg.textContent = "";
+    loadCodeModal.classList.remove('hidden');
+    loadCodeTextarea.focus();
+});
+
+closeLoadModalBtn.addEventListener('click', () => {
+    loadCodeModal.classList.add('hidden');
+});
+
+executeLoadBtn.addEventListener('click', () => {
+    const inputVal = loadCodeTextarea.value.trim();
+    if (!inputVal) {
+        loadErrorMsg.textContent = "コードを入力してください。";
+        return;
+    }
+    const success = loadFromHash(inputVal);
+    if (success) {
+        loadCodeModal.classList.add('hidden');
+        if (!previewPane.classList.contains('hidden')) updatePreview();
+    } else {
+        loadErrorMsg.textContent = "コードの読み込みに失敗しました（形式が不正です）。";
+    }
+});
+
+// 便利ボタン機能
+addCheckBtn.addEventListener('click', () => {
+    const cursorPos = memoTextarea.selectionStart;
+    const text = memoTextarea.value;
+    const lastNewline = text.lastIndexOf('\n', cursorPos - 1);
+    const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+    const currentLinePrefix = text.substring(lineStart, cursorPos);
+    const indentMatch = currentLinePrefix.match(/^[\s\u3000]*/);
+    const currentIndent = indentMatch ? indentMatch[0] : "";
+    
+    let addText = "";
+    let newCursorPos = 0;
+    
+    if (currentLinePrefix.trim() === "") {
+        addText = "- [ ] ";
+        memoTextarea.value = text.substring(0, lineStart) + addText + text.substring(lineStart);
+        newCursorPos = lineStart + addText.length;
+    } else {
+        addText = "\n" + currentIndent + "- [ ] ";
+        memoTextarea.value = text.substring(0, cursorPos) + addText + text.substring(cursorPos);
+        newCursorPos = cursorPos + addText.length;
+    }
+    updateShareCode();
+    memoTextarea.focus();
+    memoTextarea.selectionStart = memoTextarea.selectionEnd = newCursorPos;
+});
+
+clearCheckBtn.addEventListener('click', () => {
+    const text = memoTextarea.value;
+    memoTextarea.value = text.split('\n').map(line => line.replace(/(\[[ xX]\])/, match => match.toLowerCase() === '[x]' ? '[ ]' : match)).join('\n');
+    updateShareCode();
+    if (!previewPane.classList.contains('hidden')) updatePreview();
+});
+
+timestampBtn.addEventListener('click', () => {
+    const now = new Date();
+    const timestampStr = `[${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}] `;
+    const cursorPos = memoTextarea.selectionStart;
+    memoTextarea.value = memoTextarea.value.substring(0, cursorPos) + timestampStr + memoTextarea.value.substring(cursorPos);
+    updateShareCode();
+    memoTextarea.focus();
+    memoTextarea.selectionStart = memoTextarea.selectionEnd = cursorPos + timestampStr.length;
+});
+
+clearAllBtn.addEventListener('click', () => {
+    if (memoTextarea.value.trim() === "" && memoTitleInput.value === "おでかけメモ帳") return;
+    if (confirm("メモの内容をすべて消去しますか？")) {
+        memoTextarea.value = "";
+        memoTitleInput.value = "おでかけメモ帳";
+        updateShareCode();
+        if (!previewPane.classList.contains('hidden')) updatePreview();
+    }
+});
+
+// コードコピー機能
+copyCodeBtn.addEventListener('click', async () => {
+    const codeText = shareCodeInput.value;
+    if (!codeText) return;
+
+    try {
+        let success = false;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(codeText);
+                success = true;
+            }
+        } catch (e) {}
+
+        if (!success) {
+            shareCodeInput.select();
+            document.execCommand('copy');
+        }
+
+        const originalHTML = copyCodeBtn.innerHTML;
+        copyCodeBtn.innerHTML = '<span class="btn-left-content"><i class="fa-solid fa-check"></i>コピー完了</span>';
+        copyCodeBtn.classList.add('btn-success');
+        setTimeout(() => {
+            copyCodeBtn.innerHTML = originalHTML;
+            copyCodeBtn.classList.remove('btn-success');
+        }, 2000);
+    } catch (e) {
+        shareCodeInput.select();
+    }
+});
+
+shareCodeInput.addEventListener('click', () => {
+    shareCodeInput.select();
+});
+</script>
+
+</body>
+</html>
