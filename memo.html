@@ -3,853 +3,731 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="robots" content="noindex, nofollow">
-    <title>おでかけメモ帳</title>
-    <!-- FontAwesome読み込み（アイコン用） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- マークダウン変換ライブラリ (marked.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <title>でかメモ</title>
+    <link rel="apple-touch-icon" href="apple-touch-icon_n.png">
     <style>
         :root {
+            --bg-color: #ffffff;
+            --text-color: #111111;
+            --text-muted: #657786;
+            --border-color: #e1e8ed;
+            --accent-color: #E6B101;
+            --accent-hover: #cc9d01;
+            --hover-bg: rgba(0, 0, 0, 0.03);
+            --modal-bg: #f5f8fa;
+            --success-color: #17bf63;
             --col-ext-green: #70A940;
             --col-ext-purple: #846E9D;
             --col-ext-yellow: #E6B101;
             --col-ext-red: #CF5758;
             --col-ext-blue: #8AABCC;
-            --current-theme: var(--col-ext-yellow);
-            --border-color: #e9ecef;
+
+            /* 文字サイズ設定（初期値：中） */
+            --content-font-size: 1.8rem;
+            --content-line-height: 1.55;
         }
 
-        .secure-memo-app * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
+        body.font-small { --content-font-size: 1.25rem; --content-line-height: 1.45; }
+        body.font-medium { --content-font-size: 1.8rem; --content-line-height: 1.5; }
+        body.font-large { --content-font-size: 2.6rem; --content-line-height: 1.5; }
+        body.font-xlarge { --content-font-size: 3.3rem; --content-line-height: 1.5; }
 
         body {
-            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(180deg, #ffffff 0%, #fffdf4 40%, #fef3c7 100%);
-            background-attachment: fixed;
-            color: #333;
-            min-height: 100vh;
-            padding: 8px 4px 70px 4px;
-        }
-
-        .secure-memo-app {
-            width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .workspace-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            width: 100%;
-        }
-
-        .secure-memo-card {
-            width: 100%;
-            border-radius: 14px;
-            padding: 15px 10px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-        }
-
-        /* ----- Safari移行用URLコピーボタン（アプリモード時のみ表示） ----- */
-        #safari-copy-container {
-            display: none; 
-            margin-bottom: 10px;
-        }
-
-        /* ----- タイトル入力/表示部分のスタイル ----- */
-        .section-heading {
-            position: relative;
-            padding-bottom: 10px;
-            margin: 0 0 15px 0;
-            text-align: center;
-        }
-        .section-heading::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 5%;
-            width: 90%;
-            height: 5px;
-            background: linear-gradient(to right, var(--col-ext-green) 0% 20%, var(--col-ext-purple) 20% 40%, var(--col-ext-yellow) 40% 60%, var(--col-ext-blue) 60% 80%, var(--col-ext-red) 80% 100%);
-            border-radius: 3px;
-        }
-        #memo-title-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            text-align: center;
-            font-size: 1.15rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            color: #333;
-            outline: none;
-            font-family: inherit;
-            padding: 2px;
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-        #memo-title-input:focus {
-            background: rgba(0, 0, 0, 0.04);
-        }
-        #memo-title-input::placeholder {
-            color: #94a3b8;
-            font-weight: 500;
-        }
-        #memo-title-display {
-            display: inline-block;
-            width: 100%;
-            text-align: center;
-            font-size: 1.15rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            color: #333;
-            padding: 2px;
-        }
-
-        .toolbar {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .toolbar-uniform button {
-            flex: 1;
-            min-width: 52px;
-            padding: 8px 2px;
-            font-size: 0.72rem;
-            background-color: #475569;
-            border-radius: 8px;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            text-align: center;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-        }
-        .toolbar-uniform button.active {
-            background-color: var(--current-theme);
-            color: #fff;
-        }
-
-        .btn-theme-1 { background-color: var(--col-ext-green) !important; }
-        .btn-theme-2 { background-color: var(--col-ext-purple) !important; }
-        .btn-theme-3 { background-color: var(--col-ext-yellow) !important; }
-        .btn-theme-4 { background-color: var(--col-ext-blue) !important; }
-        .btn-theme-5 { background-color: var(--col-ext-red) !important; }
-
-        .theme-active {
-            outline: 3px solid #1e293b;
-            outline-offset: 2px;
-        }
-
-        /* 編集エリア・プレビューエリア */
-        textarea#memo-textarea {
-            width: 100%;
-            font-size: 16px;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            background-color: #fcfcfc;
-            color: #2b2b2b;
-            appearance: none;
-            -webkit-appearance: none;
-            transition: all 0.25s ease;
-            box-sizing: border-box;
-            height: 55vh;
-            resize: none;
-            font-family: inherit;
-        }
-        textarea#memo-textarea:focus {
-            outline: none;
-            border-color: var(--current-theme);
-            background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(230, 177, 1, 0.15);
-        }
-
-        .preview-pane, .help-content {
-            width: 100%;
-            height: 55vh;
-            background-color: #fcfcfc;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px;
-            box-sizing: border-box;
-            overflow-y: auto;
-            color: #2b2b2b;
-            transition: height 0.3s ease;
-        }
-        .preview-pane {
-            font-size: 16px;
-            line-height: 1.6;
-            word-break: break-all;
-        }
-        .pane-expanded {
-            height: 65vh !important;
-        }
-
-        .preview-pane ul, .preview-pane ol {
-            list-style: none;
-            padding-left: 20px;
-            margin: 4px 0;
-        }
-        .preview-pane li {
-            margin-bottom: 6px;
-        }
-
-        .help-content {
-            font-size: 0.82rem;
-            line-height: 1.45;
-            color: #475569;
-        }
-        .help-content h4 {
-            font-size: 0.9rem;
-            color: #1e293b;
-            margin-top: 10px;
-            margin-bottom: 4px;
-        }
-        .help-content h4:first-child {
-            margin-top: 0;
-        }
-        .help-content p {
-            margin-bottom: 8px;
-        }
-        .help-content ul {
-            padding-left: 18px;
-            margin: 6px 0 8px 0;
-        }
-        .help-content li {
-            margin-bottom: 4px;
-        }
-        .help-content code {
-            background-color: #f1f3f5;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            color: #d63384;
-        }
-
-        .btn-main {
-            display: flex;
-            flex: 1;
-            padding: 12px;
-            background-color: var(--current-theme);
-            color: #fff;
-            font-size: 0.88rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s ease;
-            align-items: center;
             justify-content: center;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .btn-main:active {
-            transform: scale(0.98);
-        }
-        .btn-left-content {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            touch-action: manipulation;
         }
 
-        .btn-theme-bg {
-            background-color: var(--current-theme) !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-        }
-        .btn-success {
-            background-color: var(--col-ext-green) !important;
-            box-shadow: 0 4px 12px rgba(112, 169, 64, 0.2) !important;
-        }
-        .btn-danger-subtle {
-            background-color: #64748b !important;
-            padding: 8px 10px;
-            font-size: 0.78rem;
-            border-radius: 8px;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .button-group {
+        .container {
+            width: 100%;
+            max-width: 600px;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            min-height: 100vh;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-top: 12px;
-        }
-        
-        .hidden {
-            display: none !important;
         }
 
-        .error-msg {
-            color: var(--col-ext-red);
-            font-size: 12px;
-            font-weight: 700;
-            margin-top: 6px;
-        }
-
-        .share-code-box {
+        /* ヘッダー */
+        .header {
+            position: sticky;
+            top: 0;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 16px;
             display: flex;
-            gap: 8px;
+            justify-content: space-between;
             align-items: center;
-            background: #f8fafc;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 6px 10px;
+            z-index: 10;
+            min-height: 48px;
+            box-sizing: border-box;
         }
-        .share-code-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            font-size: 0.8rem;
-            color: #475569;
-            outline: none;
-            font-family: monospace;
-            padding: 4px;
+
+        .header-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-color);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            max-width: 60%;
         }
 
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(12px);
+        .header-btns {
             display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ボタン感を排除した星専用のスタイル */
+        .star-btn {
+            background: none;
+            border: none;
+            padding: 2px 4px;
+            margin: 0;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            user-select: none;
+            outline: none;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .star-btn.star-yellow {
+            color: var(--col-ext-yellow);
+        }
+
+        .star-btn.star-green {
+            color: var(--col-ext-green);
+        }
+
+        /* 選択されている（アクティブ）星の強調表示 */
+        .star-btn.active {
+            opacity: 1.0;
+            transform: scale(1.15);
+        }
+
+        .btn-sub {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+
+        .btn-sub:hover {
+            background: var(--hover-bg);
+        }
+
+        /* コピー成功時のボタン状態 */
+        .btn-sub.copied {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+            color: #ffffff !important;
+        }
+
+        /* モーダル共通 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 100;
             justify-content: center;
             align-items: center;
-            z-index: 999999;
         }
+
         .modal-content {
-            background: white;
-            padding: 25px 20px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            text-align: left;
-            width: 92%;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            width: 90%;
             max-width: 400px;
+            box-sizing: border-box;
         }
+
         .modal-content h3 {
-            font-size: 1.15rem;
-            color: #2c3e50;
-            margin-bottom: 6px;
-            font-weight: 700;
-            text-align: center;
+            margin-top: 0;
+            font-size: 1rem;
         }
-        .modal-content p {
-            font-size: 0.8rem;
-            color: #7f8c8d;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .modal-content .btn-auth-final {
-            display: block;
+
+        .modal-textarea {
             width: 100%;
-            padding: 14px;
-            background-color: var(--current-theme);
-            color: #ffffff;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 700;
+            height: 100px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            padding: 8px;
+            font-size: 16px;
+            font-family: monospace;
+            resize: none;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* --- エディットモード固有のレイアウト --- */
+        #editSection {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .toolbar {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title-input {
+            width: 100%;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            padding: 8px 12px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .title-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .font-size-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .font-size-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.8rem;
             cursor: pointer;
-            margin-top: 15px;
+        }
+
+        .font-size-btn.active {
+            border-color: var(--accent-color);
+            background-color: rgba(230, 177, 1, 0.1);
+            color: #b38800;
+            font-weight: bold;
+        }
+
+        .toggle-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            border-color: var(--col-ext-blue);
+            background-color: rgba(138, 171, 204, 0.15);
+            color: #2b547e;
+            font-weight: bold;
+        }
+
+        .editor-container {
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea.main-editor {
+            width: 100%;
+            flex: 1;
+            min-height: 250px;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 16px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        textarea.main-editor::placeholder {
+            color: var(--text-muted);
+        }
+
+        .actions-section {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .actions-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hash-box-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .hash-input {
+            flex: 1;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-muted);
+            padding: 6px 8px;
+            font-size: 14px;
+            font-family: monospace;
+            height: 34px;
+            box-sizing: border-box;
+            resize: none;
+        }
+
+        /* --- プレビューモード固有のレイアウト --- */
+        #previewSection {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            padding: 24px 16px;
+            box-sizing: border-box;
+        }
+
+        .preview-top-msg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #444;
+            background: #f0f4f8;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 8px 18px;
+            margin: 0 auto 24px auto;
+            width: fit-content;
+        }
+
+        .arrow-icon {
+            font-size: 0.8rem;
+            color: #555;
+            display: inline-block;
+            transform: translateY(1px);
+        }
+
+        .preview-content {
+            font-size: var(--content-font-size);
+            line-height: var(--content-line-height);
+            white-space: pre-wrap;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .preview-bottom-msg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 1.2rem;
+            color: #2b547e;
+            background-color: rgba(138, 171, 204, 0.12);
+            border: 1px solid var(--col-ext-blue);
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-top: 40px;
+            font-weight: bold;
             text-align: center;
+        }
+
+        .footer {
+            padding: 20px 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
         }
     </style>
 </head>
-<body>
+<body class="font-medium">
 
-<div class="secure-memo-app">
-    <!-- コード読み込み用モーダル -->
-    <div id="load-code-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3>コード読み込み</h3>
-            <p>共有されたコードを入力してください。</p>
-            <div style="margin-bottom: 10px;">
-                <textarea id="load-code-textarea" placeholder="例: eyJ0... またはハッシュ全体" style="height: 90px; font-size: 13px; resize: none; background: #fcfcfc;"></textarea>
-            </div>
-            <div id="load-error-msg" class="error-msg"></div>
-            <button type="button" id="execute-load-btn" class="btn-auth-final">このメモを開く</button>
-            <button type="button" id="close-load-modal-btn" style="background: #64748b; margin-top: 8px;" class="btn-auth-final">キャンセル</button>
+<div class="container">
+    <!-- ヘッダー -->
+    <div class="header">
+        <div id="headerTitle" class="header-title"></div>
+        <div class="header-btns">
+            <button id="btnEditMode" class="star-btn star-yellow active" onclick="switchMode('edit')">★</button>
+            <button id="btnPreviewMode" class="star-btn star-green" onclick="switchMode('preview')">★</button>
         </div>
     </div>
 
-    <div id="editor-screen" class="workspace-container">
-        <div class="secure-memo-card">
-            
-            <!-- アプリモード時のみ表示：1タップで「Safari用URL」をコピーするボタン -->
-            <div id="safari-copy-container">
-                <button type="button" id="safari-url-copy-btn" class="btn-main" style="background-color: #2563eb; width: 100%; padding: 10px; font-size: 0.82rem;">
-                    <span class="btn-left-content"><i class="fa-solid fa-copy"></i>Safari用URLを一発コピーする</span>
-                </button>
+    <!-- ハッシュ読込モーダル -->
+    <div id="loadModal" class="modal">
+        <div class="modal-content">
+            <h3>コードから読み込む</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0;">共有されたコードをここに貼り付けてください。</p>
+            <textarea id="modalHashInput" class="modal-textarea" placeholder="コードをペースト..."></textarea>
+            <div class="modal-buttons">
+                <button class="btn-sub" onclick="closeLoadModal()">キャンセル</button>
+                <button class="btn-sub" style="border-color:var(--accent-color); color:#b38800;" onclick="applyHashFromModal()">読み込む</button>
             </div>
+        </div>
+    </div>
 
-            <!-- 編集可能なタイトルエリア -->
-            <div class="section-heading">
-                <input type="text" id="memo-title-input" value="おでかけメモ帳" placeholder="タイトルを入力">
-                <span id="memo-title-display" class="hidden"></span>
-            </div>
-            
-            <div class="toolbar toolbar-uniform">
-                <button type="button" id="tab-edit" class="active">編集</button>
-                <button type="button" id="tab-preview">プレビュー</button>
-                <button type="button" id="tab-help">ヘルプ</button>
-                <button type="button" id="add-check-btn">+チェック</button>
-                <button type="button" id="clear-check-btn">チェック消</button>
-                <button type="button" id="timestamp-btn">日時</button>
-                <button type="button" id="load-code-btn" style="background-color: #334155;">コード読込</button>
-            </div>
-
-            <div class="toolbar" id="theme-toolbar" style="margin-top: 6px; justify-content: space-between; align-items: center;">
-                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 0.78rem; font-weight: 600; color: #6c757d; margin-right: 2px;">テーマ:</span>
-                    <button type="button" id="theme-1" class="btn-theme-1" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="緑メンバー"><i class="fa-solid fa-crown"></i></button>
-                    <button type="button" id="theme-2" class="btn-theme-2" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="紫メンバー"><i class="fa-solid fa-crown"></i></button>
-                    <button type="button" id="theme-3" class="btn-theme-3 theme-active" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="黄色メンバー（デフォルト）"><i class="fa-solid fa-crown"></i></button>
-                    <button type="button" id="theme-4" class="btn-theme-4" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="青メンバー"><i class="fa-solid fa-crown"></i></button>
-                    <button type="button" id="theme-5" class="btn-theme-5" style="padding: 6px 9px; border-radius: 6px; border: none; cursor: pointer; color: #fff;" title="赤メンバー"><i class="fa-solid fa-crown"></i></button>
+    <!-- エディットモード -->
+    <div id="editSection">
+        <div class="toolbar">
+            <input type="text" id="titleInput" class="title-input" placeholder="タイトル（任意）" oninput="onTitleChanged()">
+            <div class="toolbar-row">
+                <div class="toolbar-group">
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">文字サイズ:</span>
+                    <div class="font-size-buttons">
+                        <button class="font-size-btn" data-size="small" onclick="setFontSize('small')">小</button>
+                        <button class="font-size-btn active" data-size="medium" onclick="setFontSize('medium')">中</button>
+                        <button class="font-size-btn" data-size="large" onclick="setFontSize('large')">大</button>
+                        <button class="font-size-btn" data-size="xlarge" onclick="setFontSize('xlarge')">特大</button>
+                    </div>
                 </div>
-                <div>
-                    <button type="button" id="clear-all-btn" class="btn-danger-subtle">全消去</button>
-                </div>
-            </div>
-            
-            <textarea id="memo-textarea" placeholder="ここにマークダウンやメモを入力...&#10;- [ ] 親項目&#10;  - [ ] 子項目"></textarea>
-            <div id="preview-pane" class="preview-pane hidden"></div>
-            <div id="help-pane" class="help-content hidden">
-                <h4>📝 チェックリストの使い方</h4>
-                <ul>
-                    <li><code>- [ ] 項目名</code> の形式で書くとチェックボックスになります。</li>
-                    <li>プレビュー画面の王冠アイコンをクリックしてON/OFFが可能です。</li>
-                </ul>
-                <h4>🔗 共有とコード読込</h4>
-                <p>メモの内容はリアルタイムで下部の「共有用コード」に反映されます。「コードコピー」ボタンでコードをコピーして他の人に共有できます。受け取った人は「コード読込」から貼り付けて開くことができます。</p>
-                <h4>📖 マークダウン記法</h4>
-                <ul>
-                    <li><code># 見出し1</code>：大きな見出し</li>
-                    <li><code>**太字**</code>：文字を太く表示</li>
-                    <li><code>- リスト</code>：箇条書き項目</li>
-                </ul>
-            </div>
-
-            <div class="button-group">
-                <div class="share-code-box">
-                    <input type="text" id="share-code-input" class="share-code-input" readonly placeholder="ここにコードがリアルタイム表示されます">
-                    <button type="button" id="copy-code-btn" class="btn-main btn-theme-bg" style="flex: 0 0 auto; padding: 6px 12px; font-size: 0.78rem;">
-                        <span class="btn-left-content"><i class="fa-solid fa-copy"></i>コードコピー</span>
-                    </button>
+                <div class="toolbar-group">
+                    <button id="toggleScrollMsgBtn" class="toggle-btn active" onclick="toggleScrollNotice()">スクロール指示: ON</button>
                 </div>
             </div>
         </div>
+
+        <div class="editor-container">
+            <textarea id="mainInput" class="main-editor" placeholder="ここに文字を入力してください..." oninput="onInputChanged()"></textarea>
+        </div>
+
+        <div class="actions-section">
+            <div class="actions-buttons">
+                <button class="btn-sub" onclick="exportFile()">ファイル保存</button>
+                <button class="btn-sub" onclick="document.getElementById('fileInput').click()">ファイル読込</button>
+                <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importFile(event)">
+                <button class="btn-sub" onclick="openLoadModal()">コード読込</button>
+                <!-- 追加したボタン（編集画面だけで表示） -->
+                <button class="btn-sub" onclick="onCustomAction()">追加ボタン</button>
+            </div>
+            <div class="hash-box-wrapper">
+                <textarea id="hashDisplay" class="hash-input" readonly placeholder="共有用コード"></textarea>
+                <button id="copyBtn" class="btn-sub" style="border-radius: 8px; padding: 6px 12px;" onclick="copyHash()">コピー</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレビューモード -->
+    <div id="previewSection">
+        <div id="previewTopMsg" class="preview-top-msg">
+            <span class="arrow-icon">▼</span>
+            <span>一番下まで読んでください</span>
+            <span class="arrow-icon">▼</span>
+        </div>
+        <div id="previewContent" class="preview-content"></div>
+        <div class="preview-bottom-msg">
+            <span>✓</span>
+            <span>以上です</span>
+        </div>
+    </div>
+
+    <!-- フッター（エディット時のみ表示） -->
+    <div id="footerArea" class="footer">
+        &copy; 2026 でかメモ
     </div>
 </div>
 
 <script>
-const memoTitleInput = document.getElementById('memo-title-input');
-const memoTitleDisplay = document.getElementById('memo-title-display');
-const themeToolbar = document.getElementById('theme-toolbar');
+    let appData = {
+        title: "",
+        text: "",
+        fontSize: "medium",
+        showScrollNotice: true
+    };
+    let currentMode = "edit";
 
-const memoTextarea = document.getElementById('memo-textarea');
-const previewPane = document.getElementById('preview-pane');
-const helpPane = document.getElementById('help-pane');
-const tabEdit = document.getElementById('tab-edit');
-const tabPreview = document.getElementById('tab-preview');
-const tabHelp = document.getElementById('tab-help');
+    window.onload = function() {
+        loadFromHash();
+        updateUI();
+    };
 
-const addCheckBtn = document.getElementById('add-check-btn');
-const clearCheckBtn = document.getElementById('clear-check-btn');
-const timestampBtn = document.getElementById('timestamp-btn');
-const clearAllBtn = document.getElementById('clear-all-btn');
+    window.onhashchange = function() {
+        loadFromHash();
+        updateUI();
+    };
 
-const shareCodeInput = document.getElementById('share-code-input');
-const copyCodeBtn = document.getElementById('copy-code-btn');
+    function switchMode(mode) {
+        currentMode = mode;
+        const editSec = document.getElementById('editSection');
+        const prevSec = document.getElementById('previewSection');
+        const footerArea = document.getElementById('footerArea');
+        const btnEdit = document.getElementById('btnEditMode');
+        const btnPrev = document.getElementById('btnPreviewMode');
 
-const loadCodeBtn = document.getElementById('load-code-btn');
-const loadCodeModal = document.getElementById('load-code-modal');
-const loadCodeTextarea = document.getElementById('load-code-textarea');
-const executeLoadBtn = document.getElementById('execute-load-btn');
-const closeLoadModalBtn = document.getElementById('close-load-modal-btn');
-
-// --- アプリモード判定とSafari用URL一発コピーの設定（ストレージ不使用） ---
-const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-if (isInStandaloneMode) {
-    document.getElementById('safari-copy-container').style.display = 'block';
-    
-    const safariUrlCopyBtn = document.getElementById('safari-url-copy-btn');
-    safariUrlCopyBtn.addEventListener('click', async () => {
-        // 現在のハッシュを含んだ完全なURLを取得
-        const currentFullUrl = window.location.href;
-
-        try {
-            await navigator.clipboard.writeText(currentFullUrl);
-            const originalHTML = safariUrlCopyBtn.innerHTML;
-            safariUrlCopyBtn.innerHTML = '<span class="btn-left-content"><i class="fa-solid fa-check"></i>URLコピー完了！Safariへ貼り付けてね</span>';
-            safariUrlCopyBtn.classList.add('btn-success');
-            setTimeout(() => {
-                safariUrlCopyBtn.innerHTML = originalHTML;
-                safariUrlCopyBtn.classList.remove('btn-success');
-            }, 3000);
-        } catch (e) {
-            // フォールバック
-            const tempInput = document.createElement('input');
-            tempInput.value = currentFullUrl;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            alert('URLをコピーしました！Safariに貼り付けてください。');
-        }
-    });
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    loadFromHash(window.location.hash.substring(1));
-    updateShareCode();
-});
-
-function loadFromHash(hashStr) {
-    if (!hashStr) return;
-    try {
-        let cleanHash = hashStr.trim();
-        if (cleanHash.includes('#')) {
-            cleanHash = cleanHash.split('#')[1];
-        }
-        const decoded = decodeURIComponent(escape(window.atob(cleanHash)));
-        
-        try {
-            const data = JSON.parse(decoded);
-            memoTitleInput.value = data.t || "";
-            memoTextarea.value = data.c || "";
-        } catch(e) {
-            memoTitleInput.value = "おでかけメモ帳";
-            memoTextarea.value = decoded;
-        }
-        
-        window.location.hash = cleanHash;
-        updateShareCode();
-        return true;
-    } catch (e) {
-        try {
-            let cleanHash = hashStr.trim();
-            if (cleanHash.includes('#')) {
-                cleanHash = cleanHash.split('#')[1];
-            }
-            const decodedStr = decodeURIComponent(cleanHash);
+        if (mode === 'edit') {
+            document.body.classList.remove('mode-preview');
+            editSec.style.display = 'flex';
+            prevSec.style.display = 'none';
+            footerArea.style.display = 'block';
             
-            try {
-                const data = JSON.parse(decodedStr);
-                memoTitleInput.value = data.t || "";
-                memoTextarea.value = data.c || "";
-            } catch(e) {
-                memoTitleInput.value = "おでかけメモ帳";
-                memoTextarea.value = decodedStr;
-            }
-            
-            window.location.hash = cleanHash;
-            updateShareCode();
-            return true;
-        } catch (err) {
-            return false;
-        }
-    }
-}
-
-function updateShareCode() {
-    const text = memoTextarea.value;
-    const title = memoTitleInput.value;
-    
-    if (!text && (!title || title === "おでかけメモ帳")) {
-        shareCodeInput.value = "";
-        window.location.hash = "";
-        return;
-    }
-    
-    try {
-        const data = { t: title, c: text };
-        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-        shareCodeInput.value = encoded;
-        window.location.hash = encoded;
-    } catch (e) {
-        shareCodeInput.value = "";
-    }
-}
-
-memoTitleInput.addEventListener('input', updateShareCode);
-memoTextarea.addEventListener('input', updateShareCode);
-
-const themes = {
-    'theme-1': 'var(--col-ext-green)',
-    'theme-2': 'var(--col-ext-purple)',
-    'theme-3': 'var(--col-ext-yellow)',
-    'theme-4': 'var(--col-ext-blue)',
-    'theme-5': 'var(--col-ext-red)'
-};
-
-Object.keys(themes).forEach(themeId => {
-    document.getElementById(themeId).addEventListener('click', () => {
-        document.documentElement.style.setProperty('--current-theme', themes[themeId]);
-        document.querySelectorAll('[id^="theme-"]').forEach(btn => btn.classList.remove('theme-active'));
-        document.getElementById(themeId).classList.add('theme-active');
-    });
-});
-
-tabEdit.addEventListener('click', () => {
-    tabEdit.classList.add('active');
-    tabPreview.classList.remove('active');
-    tabHelp.classList.remove('active');
-    
-    memoTitleInput.classList.remove('hidden');
-    memoTitleDisplay.classList.add('hidden');
-    
-    tabPreview.classList.remove('hidden');
-    tabHelp.classList.remove('hidden');
-    addCheckBtn.classList.remove('hidden');
-    clearCheckBtn.classList.remove('hidden');
-    timestampBtn.classList.remove('hidden');
-    loadCodeBtn.classList.remove('hidden');
-    themeToolbar.classList.remove('hidden');
-
-    memoTextarea.classList.remove('hidden');
-    previewPane.classList.remove('pane-expanded');
-    previewPane.classList.add('hidden');
-    helpPane.classList.add('hidden');
-});
-
-tabPreview.addEventListener('click', () => {
-    tabPreview.classList.add('active');
-    tabEdit.classList.remove('active');
-    tabHelp.classList.remove('active');
-    
-    memoTitleDisplay.textContent = memoTitleInput.value || "タイトル未設定";
-    memoTitleInput.classList.add('hidden');
-    memoTitleDisplay.classList.remove('hidden');
-    
-    tabPreview.classList.add('hidden');
-    tabHelp.classList.add('hidden');
-    addCheckBtn.classList.add('hidden');
-    clearCheckBtn.classList.add('hidden');
-    timestampBtn.classList.add('hidden');
-    loadCodeBtn.classList.add('hidden');
-    themeToolbar.classList.add('hidden');
-
-    updatePreview();
-    memoTextarea.classList.add('hidden');
-    previewPane.classList.remove('hidden');
-    previewPane.classList.add('pane-expanded');
-    helpPane.classList.add('hidden');
-});
-
-tabHelp.addEventListener('click', () => {
-    tabHelp.classList.add('active');
-    tabEdit.classList.remove('active');
-    tabPreview.classList.remove('active');
-
-    memoTitleDisplay.textContent = "ヘルプ・使い方";
-    memoTitleInput.classList.add('hidden');
-    memoTitleDisplay.classList.remove('hidden');
-
-    tabPreview.classList.add('hidden');
-    tabHelp.classList.add('hidden');
-    addCheckBtn.classList.add('hidden');
-    clearCheckBtn.classList.add('hidden');
-    timestampBtn.classList.add('hidden');
-    loadCodeBtn.classList.add('hidden');
-    themeToolbar.classList.add('hidden');
-
-    memoTextarea.classList.add('hidden');
-    previewPane.classList.add('hidden');
-    helpPane.classList.remove('hidden');
-    helpPane.classList.add('pane-expanded');
-});
-
-function updatePreview() {
-    const text = memoTextarea.value;
-    const lines = text.split('\n');
-    let processedLines = [];
-    
-    lines.forEach((line, index) => {
-        const listCheckMatch = line.match(/^([\s\u3000]*)([-*])\s+\[([ xX])\]\s+(.*)$/);
-        
-        if (listCheckMatch) {
-            const indent = listCheckMatch[1];
-            const bullet = listCheckMatch[2];
-            const checkState = listCheckMatch[3];
-            const content = listCheckMatch[4];
-            const checked = checkState.toLowerCase() === 'x';
-            
-            const crownColor = checked ? 'var(--current-theme)' : '#cbd5e1';
-            const htmlItem = `${indent}${bullet} <span class="preview-crown-toggle" data-line-index="${index}" style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:2px 4px;"><i class="fa-solid fa-crown" style="color: ${crownColor}; font-size: 1rem; transition: color 0.2s;"></i><span style="${checked ? 'text-decoration:line-through; color:#94a3b8;' : ''}">${content}</span></span>`;
-            processedLines.push(htmlItem);
+            btnEdit.classList.add('active');
+            btnPrev.classList.remove('active');
         } else {
-            processedLines.push(line);
-        }
-    });
-
-    previewPane.innerHTML = marked.parse(processedLines.join('\n'));
-
-    previewPane.querySelectorAll('.preview-crown-toggle').forEach(element => {
-        const toggleAction = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const lineIndex = parseInt(element.getAttribute('data-line-index'));
+            document.body.classList.add('mode-preview');
+            editSec.style.display = 'none';
+            prevSec.style.display = 'flex';
+            footerArea.style.display = 'none';
             
-            const allLines = memoTextarea.value.split('\n');
-            if (allLines[lineIndex] !== undefined) {
-                const currentLine = allLines[lineIndex];
-                const match = currentLine.match(/^([\s\u3000]*)([-*])\s+\[([ xX])\]\s+(.*)$/);
-                if (match) {
-                    const isCurrentlyChecked = match[3].toLowerCase() === 'x';
-                    const newCheckState = isCurrentlyChecked ? ' ' : 'x';
-                    allLines[lineIndex] = currentLine.replace(/(\[[ xX]\])/, `[${newCheckState}]`);
-                    memoTextarea.value = allLines.join('\n');
-                    updateShareCode();
-                    updatePreview();
+            btnEdit.classList.remove('active');
+            btnPrev.classList.add('active');
+
+            // プレビューの内容・表示制御を反映
+            document.getElementById('previewContent').textContent = appData.text;
+            const topMsg = document.getElementById('previewTopMsg');
+            topMsg.style.display = appData.showScrollNotice ? 'flex' : 'none';
+
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function setFontSize(size) {
+        appData.fontSize = size;
+        updateFontSizeClass();
+
+        const buttons = document.querySelectorAll('.font-size-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-size') === size) {
+                btn.classList.add('active');
+            }
+        });
+        saveToHash();
+    }
+
+    function updateFontSizeClass() {
+        const size = appData.fontSize || 'medium';
+        const classes = Array.from(document.body.classList).filter(c => !c.startsWith('font-'));
+        classes.push('font-' + size);
+        document.body.className = classes.join(' ');
+    }
+
+    function toggleScrollNotice() {
+        appData.showScrollNotice = !appData.showScrollNotice;
+        updateScrollNoticeBtn();
+        saveToHash();
+    }
+
+    function updateScrollNoticeBtn() {
+        const btn = document.getElementById('toggleScrollMsgBtn');
+        if (appData.showScrollNotice) {
+            btn.textContent = "スクロール指示: ON";
+            btn.classList.add('active');
+        } else {
+            btn.textContent = "スクロール指示: OFF";
+            btn.classList.remove('active');
+        }
+    }
+
+    function onTitleChanged() {
+        appData.title = document.getElementById('titleInput').value;
+        updateHeaderTitle();
+        saveToHash();
+    }
+
+    function onInputChanged() {
+        appData.text = document.getElementById('mainInput').value;
+        saveToHash();
+    }
+
+    function updateHeaderTitle() {
+        const headerTitle = document.getElementById('headerTitle');
+        headerTitle.textContent = appData.title || "";
+    }
+
+    function loadFromHash() {
+        try {
+            const hash = location.hash.substring(1);
+            if (!hash) {
+                appData = { title: "", text: "", fontSize: "medium", showScrollNotice: true };
+                applyDataToDOM();
+                return;
+            }
+            const jsonStr = decodeURIComponent(escape(atob(hash)));
+            const parsed = JSON.parse(jsonStr);
+            
+            if (typeof parsed === 'string') {
+                appData = { title: "", text: parsed, fontSize: "medium", showScrollNotice: true };
+            } else {
+                appData = {
+                    title: parsed.title || "",
+                    text: parsed.text || "",
+                    fontSize: parsed.fontSize || "medium",
+                    showScrollNotice: parsed.showScrollNotice !== undefined ? parsed.showScrollNotice : true
+                };
+            }
+            applyDataToDOM();
+        } catch (e) {
+            appData = { title: "", text: "", fontSize: "medium", showScrollNotice: true };
+            applyDataToDOM();
+        }
+    }
+
+    function applyDataToDOM() {
+        document.getElementById('titleInput').value = appData.title || "";
+        document.getElementById('mainInput').value = appData.text || "";
+        updateHeaderTitle();
+        updateFontSizeClass();
+        
+        // フォントサイズボタンの状態合わせ
+        const currentSize = appData.fontSize || 'medium';
+        const buttons = document.querySelectorAll('.font-size-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-size') === currentSize) {
+                btn.classList.add('active');
+            }
+        });
+
+        updateScrollNoticeBtn();
+        updateHashDisplay(location.hash.substring(1));
+    }
+
+    function saveToHash() {
+        try {
+            const jsonStr = JSON.stringify(appData);
+            const hash = btoa(unescape(encodeURIComponent(jsonStr)));
+            location.hash = hash;
+            updateHashDisplay(hash);
+        } catch (e) {
+            alert("データが長すぎるため、URLに保存できません。ファイル保存をご利用ください。");
+        }
+    }
+
+    function updateHashDisplay(hash) {
+        document.getElementById('hashDisplay').value = hash;
+    }
+
+    function copyHash() {
+        const hashField = document.getElementById('hashDisplay');
+        const copyBtn = document.getElementById('copyBtn');
+        if (!hashField.value) {
+            return;
+        }
+        navigator.clipboard.writeText(hashField.value).then(() => {
+            copyBtn.textContent = "コピー完了";
+            copyBtn.classList.add('copied');
+            setTimeout(() => {
+                copyBtn.textContent = "コピー";
+                copyBtn.classList.remove('copied');
+            }, 1500);
+        });
+    }
+
+    function openLoadModal() {
+        document.getElementById('modalHashInput').value = '';
+        document.getElementById('loadModal').style.display = 'flex';
+    }
+
+    function closeLoadModal() {
+        document.getElementById('modalHashInput').value = '';
+        document.getElementById('loadModal').style.display = 'none';
+    }
+
+    function applyHashFromModal() {
+        const newHash = document.getElementById('modalHashInput').value.trim();
+        if (!newHash) return;
+        location.hash = newHash;
+        loadFromHash();
+        closeLoadModal();
+    }
+
+    function exportFile() {
+        const jsonStr = JSON.stringify(appData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `deka-memo-${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (typeof data === 'string') {
+                    appData.text = data;
+                } else if (data && typeof data.text === 'string') {
+                    appData = data;
+                } else {
+                    return;
                 }
+                saveToHash();
+                applyDataToDOM();
+            } catch (err) {
+                // エラー時は何もしない
             }
         };
-
-        element.addEventListener('click', toggleAction);
-        element.addEventListener('touchend', toggleAction);
-    });
-}
-
-loadCodeBtn.addEventListener('click', () => {
-    loadCodeTextarea.value = "";
-    document.getElementById('load-error-msg').textContent = "";
-    loadCodeModal.classList.remove('hidden');
-    loadCodeTextarea.focus();
-});
-
-closeLoadModalBtn.addEventListener('click', () => {
-    loadCodeModal.classList.add('hidden');
-});
-
-executeLoadBtn.addEventListener('click', () => {
-    const inputVal = loadCodeTextarea.value.trim();
-    if (!inputVal) {
-        document.getElementById('load-error-msg').textContent = "コードを入力してください。";
-        return;
+        reader.readAsText(file);
+        event.target.value = '';
     }
-    const success = loadFromHash(inputVal);
-    if (success) {
-        loadCodeModal.classList.add('hidden');
-        if (!previewPane.classList.contains('hidden')) updatePreview();
-    } else {
-        document.getElementById('load-error-msg').textContent = "コードの読み込みに失敗しました（形式が不正です）。";
+
+    // 追加したボタンの動作関数（必要に応じて書き換えてください）
+    function onCustomAction() {
+        alert("追加ボタンが押されました");
     }
-});
 
-addCheckBtn.addEventListener('click', () => {
-    const cursorPos = memoTextarea.selectionStart;
-    const text = memoTextarea.value;
-    const lastNewline = text.lastIndexOf('\n', cursorPos - 1);
-    const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
-    const currentLinePrefix = text.substring(lineStart, cursorPos);
-    const indentMatch = currentLinePrefix.match(/^[\s\u3000]*/);
-    const currentIndent = indentMatch ? indentMatch[0] : "";
-    
-    let addText = "";
-    let newCursorPos = 0;
-    
-    if (currentLinePrefix.trim() === "") {
-        addText = "- [ ] ";
-        memoTextarea.value = text.substring(0, lineStart) + addTest + text.substring(lineStart);
-        newCursorPos = lineStart + addText.length;
-    } else {
-        addText = "\n" + currentIndent + "- [ ] ";
-        memoTextarea.value = text.substring(0, cursorPos) + addText + text.substring(cursorPos);
-        newCursorPos = cursorPos + addText.length;
+    function updateUI() {
+        // 初期状態の反映など
     }
-    updateShareCode();
-    memoTextarea.focus();
-    memoTextarea.selectionStart = memoTextarea.selectionEnd = newCursorPos;
-});
-
-clearCheckBtn.addEventListener('click', () => {
-    const text = memoTextarea.value;
-    memoTextarea.value = text.split('\n').map(line => line.replace(/(\[[ xX]\])/, match => match.toLowerCase() === '[x]' ? '[ ]' : match)).join('\n');
-    updateShareCode();
-    if (!previewPane.classList.contains('hidden')) updatePreview();
-});
-
-timestampBtn.addEventListener('click', () => {
-    const now = new Date();
-    const timestampStr = `[${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}] `;
-    const cursorPos = memoTextarea.selectionStart;
-    memoTextarea.value = memoTextarea.value.substring(0, cursorPos) + timestampStr + memoTextarea.value.substring(cursorPos);
-    updateShareCode();
-    memoTextarea.focus();
-    memoTextarea.selectionStart = memoTextarea.selectionEnd = cursorPos + timestampStr.length;
-});
-
-clearAllBtn.addEventListener('click', () => {
-    if (memoTextarea.value.trim() === "" && memoTitleInput.value === "おでかけメモ帳") return;
-    if (confirm("メモの内容をすべて消去しますか？")) {
-        memoTextarea.value = "";
-        memoTitleInput.value = "おでかけメモ帳";
-        updateShareCode();
-        if (!previewPane.classList.contains('hidden')) updatePreview();
-    }
-});
-
-copyCodeBtn.addEventListener('click', async () => {
-    const codeText = shareCodeInput.value;
-    if (!codeText) return;
-
-    try {
-        let success = false;
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(codeText);
-                success = true;
-            }
-        } catch (e) {}
-
-        if (!success) {
-            shareCodeInput.select();
-            document.execCommand('copy');
-        }
-
-        const originalHTML = copyCodeBtn.innerHTML;
-        copyCodeBtn.innerHTML = '<span class="btn-left-content"><i class="fa-solid fa-check"></i>コピー完了</span>';
-        copyCodeBtn.classList.add('btn-success');
-        setTimeout(() => {
-            copyCodeBtn.innerHTML = originalHTML;
-            copyCodeBtn.classList.remove('btn-success');
-        }, 2000);
-    } catch (e) {
-        shareCodeInput.select();
-    }
-});
-
-shareCodeInput.addEventListener('click', () => {
-    shareCodeInput.select();
-});
 </script>
 
 </body>
