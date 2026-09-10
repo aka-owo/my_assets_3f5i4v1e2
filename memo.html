@@ -63,21 +63,21 @@
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
-        /* ----- Safariで開くリンクのスタイル ----- */
+        /* ----- Safariで開くボタンのスタイル ----- */
         #safari-open-container {
-            display: none; /* デフォルトは非表示（JSでアプリ判定時に表示） */
+            display: none; /* デフォルトは非表示（アプリ起動時のみ表示） */
             margin-bottom: 10px;
             text-align: right;
         }
-        #safari-open-link {
-            display: inline-block;
+        #safari-open-trigger {
             background-color: #334155;
             color: #fff;
-            text-decoration: none;
+            border: none;
             border-radius: 8px;
             padding: 6px 12px;
             font-size: 0.78rem;
             font-weight: 600;
+            cursor: pointer;
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
@@ -392,6 +392,73 @@
             margin-top: 15px;
             text-align: center;
         }
+
+        /* ----- Safari誘導用ボトムシート（iOS風下部メニュー） ----- */
+        .safari-sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 99999;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            transition: opacity 0.25s ease;
+        }
+        .safari-sheet {
+            background: #f8fafc;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px 20px 0 0;
+            padding: 20px 16px 35px 16px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .safari-sheet h4 {
+            font-size: 0.95rem;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .safari-sheet p {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+        .safari-direct-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #2563eb;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            margin-bottom: 10px;
+        }
+        .safari-sheet-close {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #e2e8f0;
+            color: #475569;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -411,12 +478,23 @@
         </div>
     </div>
 
+    <!-- Safari誘導用ボトムシート（初期は非表示） -->
+    <div id="safari-sheet-overlay" class="safari-sheet-overlay hidden">
+        <div class="safari-sheet">
+            <h4>Safariで開きますか？</h4>
+            <p>iOSの仕様上、ここをタップするとSafariが起動し、現在のメモ内容を引き継いでブラウザで開くことができます。</p>
+            <!-- 実際のジャンプ用リンク（ユーザーがここをタップすれば一発でSafariが開く） -->
+            <a id="safari-direct-link" href="#" class="safari-direct-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariで今すぐ開く</a>
+            <button type="button" id="safari-sheet-close-btn" class="safari-sheet-close">閉じる</button>
+        </div>
+    </div>
+
     <div id="editor-screen" class="workspace-container">
         <div class="secure-memo-card">
             
-            <!-- ホーム画面アプリモード時専用のSafariで開くリンク -->
+            <!-- アプリモード時専用のボタン -->
             <div id="safari-open-container">
-                <a id="safari-open-link" href="#" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariで開く</a>
+                <button type="button" id="safari-open-trigger"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariで開く</button>
             </div>
 
             <!-- 編集可能なタイトルエリア -->
@@ -504,34 +582,48 @@ const loadCodeModal = document.getElementById('load-code-modal');
 const loadCodeTextarea = document.getElementById('load-code-textarea');
 const executeLoadBtn = document.getElementById('execute-load-btn');
 const closeLoadModalBtn = document.getElementById('close-load-modal-btn');
-const loadErrorMSg = document.getElementById('load-error-msg');
 
-// --- 改良：iOSアプリモード（スタンドアロン）のときだけリンクを表示し、URLを常に同期 ---
+// --- アプリモード判定とボトムシートの制御 ---
 const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 if (isInStandaloneMode) {
     const safariContainer = document.getElementById('safari-open-container');
-    const safariLink = document.getElementById('safari-open-link');
+    const safariTrigger = document.getElementById('safari-open-trigger');
+    const safariSheetOverlay = document.getElementById('safari-sheet-overlay');
+    const safariDirectLink = document.getElementById('safari-direct-link');
+    const safariSheetCloseBtn = document.getElementById('safari-sheet-close-btn');
+
     safariContainer.style.display = 'block';
 
-    // 入力やハッシュが変わるたびに、Safariリンクの遷移先を最新のURLに更新する
+    // リンク先を最新のURLに保つ関数
     function updateSafariLink() {
-        safariLink.href = window.location.href;
+        safariDirectLink.href = window.location.href;
     }
-    
-    memoTitleInput.addEventListener('input', updateSafariLink);
-    memoTextarea.addEventListener('input', updateSafariLink);
-    window.addEventListener('hashchange', updateSafariLink);
-    
-    // 初期設定
-    updateSafariLink();
+
+    // ボタンを押したら下からシートを表示する
+    safariTrigger.addEventListener('click', () => {
+        updateSafariLink();
+        safariSheetOverlay.classList.remove('hidden');
+    });
+
+    // 閉じるボタンまたは背景タップで閉じる
+    safariSheetCloseBtn.addEventListener('click', () => {
+        safariSheetOverlay.classList.add('hidden');
+    });
+    safariSheetOverlay.addEventListener('click', (e) => {
+        if (e.target === safariSheetOverlay) {
+            safariSheetOverlay.classList.add('hidden');
+        }
+    });
+
+    // リンクを押してSafariへ移動した際にもシートを閉じる
+    safariDirectLink.addEventListener('click', () => {
+        safariSheetOverlay.classList.add('hidden');
+    });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
     loadFromHash(window.location.hash.substring(1));
     updateShareCode();
-    if (isInStandaloneMode) {
-        document.getElementById('safari-open-link').href = window.location.href;
-    }
 });
 
 function loadFromHash(hashStr) {
@@ -731,9 +823,6 @@ function updatePreview() {
                     memoTextarea.value = allLines.join('\n');
                     updateShareCode();
                     updatePreview();
-                    if (isInStandaloneMode) {
-                        document.getElementById('safari-open-link').href = window.location.href;
-                    }
                 }
             }
         };
@@ -764,9 +853,6 @@ executeLoadBtn.addEventListener('click', () => {
     if (success) {
         loadCodeModal.classList.add('hidden');
         if (!previewPane.classList.contains('hidden')) updatePreview();
-        if (isInStandaloneMode) {
-            document.getElementById('safari-open-link').href = window.location.href;
-        }
     } else {
         document.getElementById('load-error-msg').textContent = "コードの読み込みに失敗しました（形式が不正です）。";
     }
@@ -786,7 +872,7 @@ addCheckBtn.addEventListener('click', () => {
     
     if (currentLinePrefix.trim() === "") {
         addText = "- [ ] ";
-        memoTextarea.value = text.substring(0, lineStart) + addText + text.substring(lineStart);
+        memoTextarea.value = text.substring(0, lineStart) + addTest + text.substring(lineStart);
         newCursorPos = lineStart + addText.length;
     } else {
         addText = "\n" + currentIndent + "- [ ] ";
@@ -794,9 +880,6 @@ addCheckBtn.addEventListener('click', () => {
         newCursorPos = cursorPos + addText.length;
     }
     updateShareCode();
-    if (isInStandaloneMode) {
-        document.getElementById('safari-open-link').href = window.location.href;
-    }
     memoTextarea.focus();
     memoTextarea.selectionStart = memoTextarea.selectionEnd = newCursorPos;
 });
@@ -805,9 +888,6 @@ clearCheckBtn.addEventListener('click', () => {
     const text = memoTextarea.value;
     memoTextarea.value = text.split('\n').map(line => line.replace(/(\[[ xX]\])/, match => match.toLowerCase() === '[x]' ? '[ ]' : match)).join('\n');
     updateShareCode();
-    if (isInStandaloneMode) {
-        document.getElementById('safari-open-link').href = window.location.href;
-    }
     if (!previewPane.classList.contains('hidden')) updatePreview();
 });
 
@@ -817,9 +897,6 @@ timestampBtn.addEventListener('click', () => {
     const cursorPos = memoTextarea.selectionStart;
     memoTextarea.value = memoTextarea.value.substring(0, cursorPos) + timestampStr + memoTextarea.value.substring(cursorPos);
     updateShareCode();
-    if (isInStandaloneMode) {
-        document.getElementById('safari-open-link').href = window.location.href;
-    }
     memoTextarea.focus();
     memoTextarea.selectionStart = memoTextarea.selectionEnd = cursorPos + timestampStr.length;
 });
@@ -830,9 +907,6 @@ clearAllBtn.addEventListener('click', () => {
         memoTextarea.value = "";
         memoTitleInput.value = "おでかけメモ帳";
         updateShareCode();
-        if (isInStandaloneMode) {
-            document.getElementById('safari-open-link').href = window.location.href;
-        }
         if (!previewPane.classList.contains('hidden')) updatePreview();
     }
 });
