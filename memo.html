@@ -63,22 +63,10 @@
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
-        /* ----- Safariで開くボタンのスタイル ----- */
-        #safari-open-container {
-            display: none; /* デフォルト非表示、アプリ起動時のみ表示 */
+        /* ----- Safari移行用URLコピーボタン（アプリモード時のみ表示） ----- */
+        #safari-copy-container {
+            display: none; 
             margin-bottom: 10px;
-            text-align: right;
-        }
-        #safari-open-trigger {
-            background-color: #2563eb;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         /* ----- タイトル入力/表示部分のスタイル ----- */
@@ -414,11 +402,11 @@
     <div id="editor-screen" class="workspace-container">
         <div class="secure-memo-card">
             
-            <!-- アプリモード時専用のボタン（ハッシュなしのクリーンなURLでSafariを開く） -->
-            <div id="safari-open-container">
-                <a id="safari-direct-link" href="#" style="text-decoration: none; display: block;">
-                    <button type="button" id="safari-open-trigger" style="width: 100%; pointer-events: none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariアプリで開き直す</button>
-                </a>
+            <!-- アプリモード時のみ表示：1タップで「Safari用URL」をコピーするボタン -->
+            <div id="safari-copy-container">
+                <button type="button" id="safari-url-copy-btn" class="btn-main" style="background-color: #2563eb; width: 100%; padding: 10px; font-size: 0.82rem;">
+                    <span class="btn-left-content"><i class="fa-solid fa-copy"></i>Safari用URLを一発コピーする</span>
+                </button>
             </div>
 
             <!-- 編集可能なタイトルエリア -->
@@ -507,17 +495,36 @@ const loadCodeTextarea = document.getElementById('load-code-textarea');
 const executeLoadBtn = document.getElementById('execute-load-btn');
 const closeLoadModalBtn = document.getElementById('close-load-modal-btn');
 
-// --- アプリモード判定とSafariジャンプの設定（localStorage一切不使用） ---
+// --- アプリモード判定とSafari用URL一発コピーの設定（ストレージ不使用） ---
 const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 if (isInStandaloneMode) {
-    const safariContainer = document.getElementById('safari-open-container');
-    const safariDirectLink = document.getElementById('safari-direct-link');
+    document.getElementById('safari-copy-container').style.display = 'block';
+    
+    const safariUrlCopyBtn = document.getElementById('safari-url-copy-btn');
+    safariUrlCopyBtn.addEventListener('click', async () => {
+        // 現在のハッシュを含んだ完全なURLを取得
+        const currentFullUrl = window.location.href;
 
-    safariContainer.style.display = 'block';
-
-    // ハッシュ（#以降）を完全に取り除いたクリーンなURLを生成してセットする
-    const cleanBaseUrl = window.location.href.split('#')[0];
-    safariDirectLink.href = cleanBaseUrl;
+        try {
+            await navigator.clipboard.writeText(currentFullUrl);
+            const originalHTML = safariUrlCopyBtn.innerHTML;
+            safariUrlCopyBtn.innerHTML = '<span class="btn-left-content"><i class="fa-solid fa-check"></i>URLコピー完了！Safariへ貼り付けてね</span>';
+            safariUrlCopyBtn.classList.add('btn-success');
+            setTimeout(() => {
+                safariUrlCopyBtn.innerHTML = originalHTML;
+                safariUrlCopyBtn.classList.remove('btn-success');
+            }, 3000);
+        } catch (e) {
+            // フォールバック
+            const tempInput = document.createElement('input');
+            tempInput.value = currentFullUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            alert('URLをコピーしました！Safariに貼り付けてください。');
+        }
+    });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
