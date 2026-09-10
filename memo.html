@@ -451,8 +451,8 @@
                 <button class="btn-sub" onclick="document.getElementById('fileInput').click()">ファイル読込</button>
                 <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importFile(event)">
                 <button class="btn-sub" onclick="openLoadModal()">コード読込</button>
-                <!-- 追加したボタン（編集画面だけで表示） -->
-                <button class="btn-sub" onclick="onCustomAction()">追加ボタン</button>
+                <!-- Safariで開くコピーボタン -->
+                <button id="safariCopyBtn" class="btn-sub" onclick="copySafariUrl()">Safariで開くコピー</button>
             </div>
             <div class="hash-box-wrapper">
                 <textarea id="hashDisplay" class="hash-input" readonly placeholder="共有用コード"></textarea>
@@ -667,6 +667,23 @@
         });
     }
 
+    // 「Safariで開くコピー」ボタンの処理
+    function copySafariUrl() {
+        const safariBtn = document.getElementById('safariCopyBtn');
+        const currentUrl = window.location.href; // 現在のページのURL（ハッシュ含む）
+
+        navigator.clipboard.writeText(currentUrl).then(() => {
+            safariBtn.textContent = "コピー完了";
+            safariBtn.classList.add('copied');
+            setTimeout(() => {
+                safariBtn.textContent = "Safariで開くコピー";
+                safariBtn.classList.remove('copied');
+            }, 1500);
+        }).catch(err => {
+            console.error("コピーに失敗しました", err);
+        });
+    }
+
     function openLoadModal() {
         document.getElementById('modalHashInput').value = '';
         document.getElementById('loadModal').style.display = 'flex';
@@ -718,11 +735,6 @@
         };
         reader.readAsText(file);
         event.target.value = '';
-    }
-
-    // 追加したボタンの動作関数（必要に応じて書き換えてください）
-    function onCustomAction() {
-        alert("追加ボタンが押されました");
     }
 
     function updateUI() {
