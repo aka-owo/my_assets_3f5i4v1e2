@@ -16,7 +16,7 @@
             --col-ext-yellow: #E6B101;
             --col-ext-red: #CF5758;
             --col-ext-blue: #8AABCC;
-            --current-theme: var(--col-ext-yellow); /* デフォルトは黄色に固定 */
+            --current-theme: var(--col-ext-yellow);
             --border-color: #e9ecef;
         }
 
@@ -65,12 +65,12 @@
 
         /* ----- Safariで開くボタンのスタイル ----- */
         #safari-open-container {
-            display: none; /* デフォルトは非表示（アプリ起動時のみ表示） */
+            display: none; /* デフォルト非表示、アプリ起動時のみ表示 */
             margin-bottom: 10px;
             text-align: right;
         }
         #safari-open-trigger {
-            background-color: #334155;
+            background-color: #2563eb;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -392,73 +392,6 @@
             margin-top: 15px;
             text-align: center;
         }
-
-        /* ----- Safari誘導用ボトムシート（iOS風下部メニュー） ----- */
-        .safari-sheet-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 99999;
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            transition: opacity 0.25s ease;
-        }
-        .safari-sheet {
-            background: #f8fafc;
-            width: 100%;
-            max-width: 500px;
-            border-radius: 20px 20px 0 0;
-            padding: 20px 16px 35px 16px;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
-            text-align: center;
-            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        .safari-sheet h4 {
-            font-size: 0.95rem;
-            color: #1e293b;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-        .safari-sheet p {
-            font-size: 0.78rem;
-            color: #64748b;
-            margin-bottom: 16px;
-            line-height: 1.4;
-        }
-        .safari-direct-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: #2563eb;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-            margin-bottom: 10px;
-        }
-        .safari-sheet-close {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background: #e2e8f0;
-            color: #475569;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -478,23 +411,14 @@
         </div>
     </div>
 
-    <!-- Safari誘導用ボトムシート（初期は非表示） -->
-    <div id="safari-sheet-overlay" class="safari-sheet-overlay hidden">
-        <div class="safari-sheet">
-            <h4>Safariで開きますか？</h4>
-            <p>iOSの仕様上、ここをタップするとSafariが起動し、現在のメモ内容を引き継いでブラウザで開くことができます。</p>
-            <!-- 実際のジャンプ用リンク（ユーザーがここをタップすれば一発でSafariが開く） -->
-            <a id="safari-direct-link" href="#" class="safari-direct-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariで今すぐ開く</a>
-            <button type="button" id="safari-sheet-close-btn" class="safari-sheet-close">閉じる</button>
-        </div>
-    </div>
-
     <div id="editor-screen" class="workspace-container">
         <div class="secure-memo-card">
             
-            <!-- アプリモード時専用のボタン -->
+            <!-- アプリモード時専用のボタン（ハッシュなしのクリーンなURLでSafariを開く） -->
             <div id="safari-open-container">
-                <button type="button" id="safari-open-trigger"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariで開く</button>
+                <a id="safari-direct-link" href="#" style="text-decoration: none; display: block;">
+                    <button type="button" id="safari-open-trigger" style="width: 100%; pointer-events: none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariアプリで開き直す</button>
+                </a>
             </div>
 
             <!-- 編集可能なタイトルエリア -->
@@ -583,42 +507,17 @@ const loadCodeTextarea = document.getElementById('load-code-textarea');
 const executeLoadBtn = document.getElementById('execute-load-btn');
 const closeLoadModalBtn = document.getElementById('close-load-modal-btn');
 
-// --- アプリモード判定とボトムシートの制御 ---
+// --- アプリモード判定とSafariジャンプの設定（localStorage一切不使用） ---
 const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 if (isInStandaloneMode) {
     const safariContainer = document.getElementById('safari-open-container');
-    const safariTrigger = document.getElementById('safari-open-trigger');
-    const safariSheetOverlay = document.getElementById('safari-sheet-overlay');
     const safariDirectLink = document.getElementById('safari-direct-link');
-    const safariSheetCloseBtn = document.getElementById('safari-sheet-close-btn');
 
     safariContainer.style.display = 'block';
 
-    // リンク先を最新のURLに保つ関数
-    function updateSafariLink() {
-        safariDirectLink.href = window.location.href;
-    }
-
-    // ボタンを押したら下からシートを表示する
-    safariTrigger.addEventListener('click', () => {
-        updateSafariLink();
-        safariSheetOverlay.classList.remove('hidden');
-    });
-
-    // 閉じるボタンまたは背景タップで閉じる
-    safariSheetCloseBtn.addEventListener('click', () => {
-        safariSheetOverlay.classList.add('hidden');
-    });
-    safariSheetOverlay.addEventListener('click', (e) => {
-        if (e.target === safariSheetOverlay) {
-            safariSheetOverlay.classList.add('hidden');
-        }
-    });
-
-    // リンクを押してSafariへ移動した際にもシートを閉じる
-    safariDirectLink.addEventListener('click', () => {
-        safariSheetOverlay.classList.add('hidden');
-    });
+    // ハッシュ（#以降）を完全に取り除いたクリーンなURLを生成してセットする
+    const cleanBaseUrl = window.location.href.split('#')[0];
+    safariDirectLink.href = cleanBaseUrl;
 }
 
 window.addEventListener('DOMContentLoaded', () => {
