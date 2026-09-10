@@ -63,21 +63,21 @@
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
-        /* ----- Safariで開くボタンのスタイル ----- */
+        /* ----- Safariで開くリンクのスタイル ----- */
         #safari-open-container {
             display: none; /* デフォルトは非表示（JSでアプリ判定時に表示） */
             margin-bottom: 10px;
             text-align: right;
         }
-        #safari-open-btn {
+        #safari-open-link {
+            display: inline-block;
             background-color: #334155;
             color: #fff;
-            border: none;
+            text-decoration: none;
             border-radius: 8px;
             padding: 6px 12px;
             font-size: 0.78rem;
             font-weight: 600;
-            cursor: pointer;
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
@@ -210,7 +210,6 @@
             line-height: 1.6;
             word-break: break-all;
         }
-        /* プレビュー時はツールバーが消える分、表示領域を広げる */
         .pane-expanded {
             height: 65vh !important;
         }
@@ -321,7 +320,6 @@
             margin-top: 6px;
         }
 
-        /* 共有コード表示エリア */
         .share-code-box {
             display: flex;
             gap: 8px;
@@ -345,7 +343,6 @@
             white-space: nowrap;
         }
 
-        /* モーダル */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -417,9 +414,9 @@
     <div id="editor-screen" class="workspace-container">
         <div class="secure-memo-card">
             
-            <!-- ホーム画面追加時専用のSafariで開くボタン -->
+            <!-- ホーム画面アプリモード時専用のSafariで開くリンク -->
             <div id="safari-open-container">
-                <button type="button" id="safari-open-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariへ🌐</button>
+                <a id="safari-open-link" href="#" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Safariで開く</a>
             </div>
 
             <!-- 編集可能なタイトルエリア -->
@@ -438,7 +435,6 @@
                 <button type="button" id="load-code-btn" style="background-color: #334155;">コード読込</button>
             </div>
 
-            <!-- 5人のメンバーカラー切替ツールバー（プレビュー時は非表示になる対象） -->
             <div class="toolbar" id="theme-toolbar" style="margin-top: 6px; justify-content: space-between; align-items: center;">
                 <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                     <span style="font-size: 0.78rem; font-weight: 600; color: #6c757d; margin-right: 2px;">テーマ:</span>
@@ -471,7 +467,6 @@
                 </ul>
             </div>
 
-            <!-- リアルタイムコード表示＆コピーエリア -->
             <div class="button-group">
                 <div class="share-code-box">
                     <input type="text" id="share-code-input" class="share-code-input" readonly placeholder="ここにコードがリアルタイム表示されます">
@@ -509,28 +504,36 @@ const loadCodeModal = document.getElementById('load-code-modal');
 const loadCodeTextarea = document.getElementById('load-code-textarea');
 const executeLoadBtn = document.getElementById('execute-load-btn');
 const closeLoadModalBtn = document.getElementById('close-load-modal-btn');
-const loadErrorMsg = document.getElementById('load-error-msg');
+const loadErrorMSg = document.getElementById('load-error-msg');
 
-// --- 追加：ホーム画面アプリモード（スタンドアロン）のときだけ「Safariで開く」を表示 ---
+// --- 改良：iOSアプリモード（スタンドアロン）のときだけリンクを表示し、URLを常に同期 ---
 const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 if (isInStandaloneMode) {
     const safariContainer = document.getElementById('safari-open-container');
-    const safariBtn = document.getElementById('safari-open-btn');
+    const safariLink = document.getElementById('safari-open-link');
     safariContainer.style.display = 'block';
 
-    safariBtn.addEventListener('click', () => {
-        // 現在のURL（ハッシュつき）をそのままSafariに引き渡す
-        window.location.href = window.location.href;
-    });
+    // 入力やハッシュが変わるたびに、Safariリンクの遷移先を最新のURLに更新する
+    function updateSafariLink() {
+        safariLink.href = window.location.href;
+    }
+    
+    memoTitleInput.addEventListener('input', updateSafariLink);
+    memoTextarea.addEventListener('input', updateSafariLink);
+    window.addEventListener('hashchange', updateSafariLink);
+    
+    // 初期設定
+    updateSafariLink();
 }
 
-// 起動時にURLハッシュからデータをデコードして復元
 window.addEventListener('DOMContentLoaded', () => {
     loadFromHash(window.location.hash.substring(1));
     updateShareCode();
+    if (isInStandaloneMode) {
+        document.getElementById('safari-open-link').href = window.location.href;
+    }
 });
 
-// ハッシュからの読み込み（旧バージョンの単なるテキストデータにも対応）
 function loadFromHash(hashStr) {
     if (!hashStr) return;
     try {
@@ -541,12 +544,10 @@ function loadFromHash(hashStr) {
         const decoded = decodeURIComponent(escape(window.atob(cleanHash)));
         
         try {
-            // JSON形式（タイトル＋本文）のパースを試みる
             const data = JSON.parse(decoded);
             memoTitleInput.value = data.t || "";
             memoTextarea.value = data.c || "";
         } catch(e) {
-            // 旧バージョンのハッシュだった場合は本文として扱う
             memoTitleInput.value = "おでかけメモ帳";
             memoTextarea.value = decoded;
         }
@@ -580,7 +581,6 @@ function loadFromHash(hashStr) {
     }
 }
 
-// リアルタイムでコード（ハッシュ）を生成してテキストボックスに反映
 function updateShareCode() {
     const text = memoTextarea.value;
     const title = memoTitleInput.value;
@@ -592,7 +592,6 @@ function updateShareCode() {
     }
     
     try {
-        // タイトルと本文をJSONでまとめる
         const data = { t: title, c: text };
         const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
         shareCodeInput.value = encoded;
@@ -605,7 +604,6 @@ function updateShareCode() {
 memoTitleInput.addEventListener('input', updateShareCode);
 memoTextarea.addEventListener('input', updateShareCode);
 
-// テーマ切替
 const themes = {
     'theme-1': 'var(--col-ext-green)',
     'theme-2': 'var(--col-ext-purple)',
@@ -622,17 +620,14 @@ Object.keys(themes).forEach(themeId => {
     });
 });
 
-// タブ切り替え（編集 / プレビュー / ヘルプ）
 tabEdit.addEventListener('click', () => {
     tabEdit.classList.add('active');
     tabPreview.classList.remove('active');
     tabHelp.classList.remove('active');
     
-    // タイトル表示切替
     memoTitleInput.classList.remove('hidden');
     memoTitleDisplay.classList.add('hidden');
     
-    // 隠していたボタンを再表示
     tabPreview.classList.remove('hidden');
     tabHelp.classList.remove('hidden');
     addCheckBtn.classList.remove('hidden');
@@ -652,12 +647,10 @@ tabPreview.addEventListener('click', () => {
     tabEdit.classList.remove('active');
     tabHelp.classList.remove('active');
     
-    // タイトル表示切替（入力不可にする）
     memoTitleDisplay.textContent = memoTitleInput.value || "タイトル未設定";
     memoTitleInput.classList.add('hidden');
     memoTitleDisplay.classList.remove('hidden');
     
-    // 不要なボタンを非表示にしてスッキリさせる
     tabPreview.classList.add('hidden');
     tabHelp.classList.add('hidden');
     addCheckBtn.classList.add('hidden');
@@ -669,7 +662,7 @@ tabPreview.addEventListener('click', () => {
     updatePreview();
     memoTextarea.classList.add('hidden');
     previewPane.classList.remove('hidden');
-    previewPane.classList.add('pane-expanded'); // 高さを広げる
+    previewPane.classList.add('pane-expanded');
     helpPane.classList.add('hidden');
 });
 
@@ -678,12 +671,10 @@ tabHelp.addEventListener('click', () => {
     tabEdit.classList.remove('active');
     tabPreview.classList.remove('active');
 
-    // タイトル表示切替
     memoTitleDisplay.textContent = "ヘルプ・使い方";
     memoTitleInput.classList.add('hidden');
     memoTitleDisplay.classList.remove('hidden');
 
-    // 不要なボタンを非表示
     tabPreview.classList.add('hidden');
     tabHelp.classList.add('hidden');
     addCheckBtn.classList.add('hidden');
@@ -698,7 +689,6 @@ tabHelp.addEventListener('click', () => {
     helpPane.classList.add('pane-expanded');
 });
 
-// プレビューの王冠・チェックボックス連動
 function updatePreview() {
     const text = memoTextarea.value;
     const lines = text.split('\n');
@@ -741,6 +731,9 @@ function updatePreview() {
                     memoTextarea.value = allLines.join('\n');
                     updateShareCode();
                     updatePreview();
+                    if (isInStandaloneMode) {
+                        document.getElementById('safari-open-link').href = window.location.href;
+                    }
                 }
             }
         };
@@ -750,10 +743,9 @@ function updatePreview() {
     });
 }
 
-// コード読み込みモーダルの制御
 loadCodeBtn.addEventListener('click', () => {
     loadCodeTextarea.value = "";
-    loadErrorMsg.textContent = "";
+    document.getElementById('load-error-msg').textContent = "";
     loadCodeModal.classList.remove('hidden');
     loadCodeTextarea.focus();
 });
@@ -765,19 +757,21 @@ closeLoadModalBtn.addEventListener('click', () => {
 executeLoadBtn.addEventListener('click', () => {
     const inputVal = loadCodeTextarea.value.trim();
     if (!inputVal) {
-        loadErrorMsg.textContent = "コードを入力してください。";
+        document.getElementById('load-error-msg').textContent = "コードを入力してください。";
         return;
     }
     const success = loadFromHash(inputVal);
     if (success) {
         loadCodeModal.classList.add('hidden');
         if (!previewPane.classList.contains('hidden')) updatePreview();
+        if (isInStandaloneMode) {
+            document.getElementById('safari-open-link').href = window.location.href;
+        }
     } else {
-        loadErrorMsg.textContent = "コードの読み込みに失敗しました（形式が不正です）。";
+        document.getElementById('load-error-msg').textContent = "コードの読み込みに失敗しました（形式が不正です）。";
     }
 });
 
-// 便利ボタン機能
 addCheckBtn.addEventListener('click', () => {
     const cursorPos = memoTextarea.selectionStart;
     const text = memoTextarea.value;
@@ -800,6 +794,9 @@ addCheckBtn.addEventListener('click', () => {
         newCursorPos = cursorPos + addText.length;
     }
     updateShareCode();
+    if (isInStandaloneMode) {
+        document.getElementById('safari-open-link').href = window.location.href;
+    }
     memoTextarea.focus();
     memoTextarea.selectionStart = memoTextarea.selectionEnd = newCursorPos;
 });
@@ -808,6 +805,9 @@ clearCheckBtn.addEventListener('click', () => {
     const text = memoTextarea.value;
     memoTextarea.value = text.split('\n').map(line => line.replace(/(\[[ xX]\])/, match => match.toLowerCase() === '[x]' ? '[ ]' : match)).join('\n');
     updateShareCode();
+    if (isInStandaloneMode) {
+        document.getElementById('safari-open-link').href = window.location.href;
+    }
     if (!previewPane.classList.contains('hidden')) updatePreview();
 });
 
@@ -817,6 +817,9 @@ timestampBtn.addEventListener('click', () => {
     const cursorPos = memoTextarea.selectionStart;
     memoTextarea.value = memoTextarea.value.substring(0, cursorPos) + timestampStr + memoTextarea.value.substring(cursorPos);
     updateShareCode();
+    if (isInStandaloneMode) {
+        document.getElementById('safari-open-link').href = window.location.href;
+    }
     memoTextarea.focus();
     memoTextarea.selectionStart = memoTextarea.selectionEnd = cursorPos + timestampStr.length;
 });
@@ -827,11 +830,13 @@ clearAllBtn.addEventListener('click', () => {
         memoTextarea.value = "";
         memoTitleInput.value = "おでかけメモ帳";
         updateShareCode();
+        if (isInStandaloneMode) {
+            document.getElementById('safari-open-link').href = window.location.href;
+        }
         if (!previewPane.classList.contains('hidden')) updatePreview();
     }
 });
 
-// コードコピー機能
 copyCodeBtn.addEventListener('click', async () => {
     const codeText = shareCodeInput.value;
     if (!codeText) return;
