@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FF14 ミラプリメモ (2箇所染色対応＆検索修正版)</title>
+<title>FF14 ミラプリ装備＆カララントメモ</title>
+<!-- エオルゼアデータベース公式ツールチップ -->
 <script src="https://img.finalfantasyxiv.com/lds/pc/global/js/eorzeadb/loader.js?v2"></script>
 <style>
   body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #1a1a1d; color: #e0e0e0; padding: 20px; }
@@ -31,7 +32,6 @@
   
   .color-badge { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #fff; display: inline-block; flex-shrink: 0; box-shadow: 0 0 2px rgba(0,0,0,0.8); }
   
-  /* サジェストリスト */
   .suggest-list { position: absolute; top: 40px; left: 38px; right: 0; background: #222; border: 1px solid #e3b04b; z-index: 99; max-height: 180px; overflow-y: auto; list-style: none; padding: 0; margin: 0; display: none; }
   .suggest-item { padding: 6px 10px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
   .suggest-item:hover { background: #3e3f4a; color: #e3b04b; }
@@ -41,7 +41,7 @@
 </head>
 <body>
 
-<h1>FF14 ミラプリ装備＆カララントメモ (2箇所染色対応)</h1>
+<h1>FF14 ミラプリ装備＆カララントメモ (GitHub Pages対応版)</h1>
 
 <div class="controls">
   <button onclick="addCard()">＋ 新しいメモカードを追加</button>
@@ -51,7 +51,7 @@
 <div class="card-container" id="container"></div>
 
 <script>
-// カララント定義（通常色とアディショナルカラー完全分離）
+// 全137色（通常色とアディショナルカラー完全分離）
 const ALL_DYES = [
   { group: "未染色", items: [{ name: "なし / 固有色", hex: "transparent" }] },
   { group: "ホワイト・ブラック（通常）", items: [
@@ -200,7 +200,7 @@ function addCard() {
 }
 
 // デバウンス処理（連打通信防止）
-function debounce(func, delay = 350) {
+function debounce(func, delay = 300) {
   let timer;
   return (...args) => {
     clearTimeout(timer);
@@ -208,7 +208,7 @@ function debounce(func, delay = 350) {
   };
 }
 
-// CORSプロキシを経由した検索処理
+// GitHub Pages環境で直接Garland Tools APIを呼び出す検索処理
 const searchItem = debounce(async (inputEl, cardId, slot) => {
   const query = inputEl.value.trim();
   const suggestList = document.getElementById(`suggest-${cardId}-${slot}`);
@@ -221,11 +221,11 @@ const searchItem = debounce(async (inputEl, cardId, slot) => {
   suggestList.innerHTML = '<li class="status-text">検索中...</li>';
   suggestList.style.display = 'block';
 
-  const rawUrl = `https://www.garlandtools.org/api/search.org.php?text=${encodeURIComponent(query)}&lang=ja`;
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+  // Garland Tools APIへの直接アクセス（GitHub PagesのHTTPS環境で正常に動作します）
+  const url = `https://www.garlandtools.org/api/search.org.php?text=${encodeURIComponent(query)}&lang=ja`;
 
   try {
-    const res = await fetch(proxyUrl);
+    const res = await fetch(url);
     if (!res.ok) throw new Error('通信エラー');
     const data = await res.json();
     const items = data.filter(d => d.type === 'item').slice(0, 5);
@@ -246,11 +246,11 @@ const searchItem = debounce(async (inputEl, cardId, slot) => {
         suggestList.appendChild(li);
       });
     } else {
-      suggestList.innerHTML = '<li class="status-text">見つかりませんでした</li>';
+      suggestList.innerHTML = '<li class="status-text">該当する装備が見つかりません</li>';
     }
   } catch(e) {
     console.error(e);
-    suggestList.innerHTML = '<li class="status-text">検索エラー（ネット接続を確認してください）</li>';
+    suggestList.innerHTML = '<li class="status-text">検索エラー（直接アクセス失敗）</li>';
   }
 });
 
