@@ -41,7 +41,7 @@
 </head>
 <body>
 
-<h1>FF14 ミラプリ装備＆カララントメモ (GitHub Pages対応版)</h1>
+<h1>FF14 ミラプリ装備＆カララントメモ</h1>
 
 <div class="controls">
   <button onclick="addCard()">＋ 新しいメモカードを追加</button>
@@ -135,6 +135,7 @@ const ALL_DYES = [
 
 const SLOTS = ["武具", "頭防具", "胴防具", "手防具", "脚防具", "足防具"];
 let cardCount = 0;
+let currentSearchTarget = null;
 
 function createDyeOptionsHtml() {
   let html = '';
@@ -162,10 +163,9 @@ function addCard() {
         <div class="slot-label">${slot}</div>
         <div class="input-row">
           <div class="item-preview" id="preview-${cardId}-${slot}"></div>
-          <input type="text" class="item-input" id="input-${cardId}-${slot}" placeholder="装備名を入力..." oninput="searchItem(this, '${cardId}', '${slot}')" autocomplete="off">
+          <input type="text" class="item-input" id="input-${cardId}-${slot}" placeholder="装備名を入力..." oninput="triggerSearch(this, '${cardId}', '${slot}')" autocomplete="off">
         </div>
         
-        <!-- 2箇所染色機能 -->
         <div class="dye-row">
           <div class="dye-group">
             <span class="dye-label">染色1:</span>
@@ -199,60 +199,62 @@ function addCard() {
   document.getElementById('container').appendChild(card);
 }
 
-// デバウンス処理（連打通信防止）
-function debounce(func, delay = 300) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => func.apply(this, args), delay);
-  };
+// デバウンス処理
+let searchTimer;
+function triggerSearch(inputEl, cardId, slot) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const query = inputEl.value.trim();
+    const suggestList = document.getElementById(`suggest-${cardId}-${slot}`);
+
+    if (query.length < 2) {
+      suggestList.style.display = 'none';
+      return;
+    }
+
+    suggestList.innerHTML = '<li class="status-text">検索中...</li>';
+    suggestList.style.display = 'block';
+
+    currentSearchTarget = { inputEl, cardId, slot, suggestList };
+
+    // 古いJSONP scriptタグがあれば削除
+    const oldScript = document.getElementById('jsonp-search-script');
+    if (oldScript) oldScript.remove();
+
+    // CORS回避のためのJSONP scriptタグ生成
+    const script = document.createElement('script');
+    script.id = 'jsonp-search-script';
+    script.src = `https://www.garlandtools.org/api/search.org.php?text=${encodeURIComponent(query)}&lang=ja&client=garland_callback`;
+    document.body.appendChild(script);
+  }, 350);
 }
 
-// GitHub Pages環境で直接Garland Tools APIを呼び出す検索処理
-const searchItem = debounce(async (inputEl, cardId, slot) => {
-  const query = inputEl.value.trim();
-  const suggestList = document.getElementById(`suggest-${cardId}-${slot}`);
-  
-  if (query.length < 2) {
-    suggestList.style.display = 'none';
-    return;
+// Garland Tools APIからのレスポンス受け取りコールバック
+window.garland_callback = function(data) {
+  if (!currentSearchTarget) return;
+  const { inputEl, cardId, slot, suggestList } = currentSearchTarget;
+
+  const items = data.filter(d => d.type === 'item').slice(0, 5);
+
+  suggestList.innerHTML = '';
+  if (items.length > 0) {
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'suggest-item';
+      const iconUrl = `https://www.garlandtools.org/db/icons/item/${item.obj.icon}.png`;
+      li.innerHTML = `<img src="${iconUrl}"> <span>${item.obj.n}</span>`;
+      
+      li.onclick = () => {
+        inputEl.value = item.obj.n;
+        document.getElementById(`preview-${cardId}-${slot}`).innerHTML = `<img src="${iconUrl}">`;
+        suggestList.style.display = 'none';
+      };
+      suggestList.appendChild(li);
+    });
+  } else {
+    suggestList.innerHTML = '<li class="status-text">該当する装備が見つかりません</li>';
   }
-
-  suggestList.innerHTML = '<li class="status-text">検索中...</li>';
-  suggestList.style.display = 'block';
-
-  // Garland Tools APIへの直接アクセス（GitHub PagesのHTTPS環境で正常に動作します）
-  const url = `https://www.garlandtools.org/api/search.org.php?text=${encodeURIComponent(query)}&lang=ja`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('通信エラー');
-    const data = await res.json();
-    const items = data.filter(d => d.type === 'item').slice(0, 5);
-
-    suggestList.innerHTML = '';
-    if (items.length > 0) {
-      items.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'suggest-item';
-        const iconUrl = `https://www.garlandtools.org/db/icons/item/${item.obj.icon}.png`;
-        li.innerHTML = `<img src="${iconUrl}"> <span>${item.obj.n}</span>`;
-        
-        li.onclick = () => {
-          inputEl.value = item.obj.n;
-          document.getElementById(`preview-${cardId}-${slot}`).innerHTML = `<img src="${iconUrl}">`;
-          suggestList.style.display = 'none';
-        };
-        suggestList.appendChild(li);
-      });
-    } else {
-      suggestList.innerHTML = '<li class="status-text">該当する装備が見つかりません</li>';
-    }
-  } catch(e) {
-    console.error(e);
-    suggestList.innerHTML = '<li class="status-text">検索エラー（直接アクセス失敗）</li>';
-  }
-});
+};
 
 function updateDyeColor(selectEl, badgeId) {
   const selectedOption = selectEl.options[selectEl.selectedIndex];
