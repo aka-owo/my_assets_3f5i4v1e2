@@ -2,8 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FF14 ミラプリレシピ＆カララントメモ</title>
-<!-- エオルゼアデータベース公式ツールチップスクリプト -->
+<title>FF14 ミラプリメモ (2箇所染色対応＆検索修正版)</title>
 <script src="https://img.finalfantasyxiv.com/lds/pc/global/js/eorzeadb/loader.js?v2"></script>
 <style>
   body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #1a1a1d; color: #e0e0e0; padding: 20px; }
@@ -13,63 +12,143 @@
   button:hover { background: #d29d38; }
   
   .card-container { display: flex; flex-wrap: wrap; gap: 20px; }
-  .recipe-card { background: #2a2a30; border: 1px solid #444; border-radius: 8px; padding: 15px; width: 340px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .recipe-card { background: #2a2a30; border: 1px solid #444; border-radius: 8px; padding: 15px; width: 440px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
   .card-header { font-weight: bold; font-size: 16px; color: #e3b04b; margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 6px; }
   
-  .slot { margin-bottom: 10px; position: relative; }
-  .slot-label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
-  .input-row { display: flex; gap: 6px; align-items: center; }
+  .slot { margin-bottom: 12px; position: relative; background: #222227; padding: 8px; border-radius: 6px; }
+  .slot-label { font-size: 11px; color: #aaa; margin-bottom: 4px; font-weight: bold; }
+  .input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .dye-row { display: flex; gap: 12px; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #333; }
+  .dye-group { display: flex; align-items: center; gap: 4px; }
+  .dye-label { font-size: 10px; color: #888; }
   
   .item-preview { width: 32px; height: 32px; background: #111; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
   .item-preview img { width: 100%; height: 100%; }
   
-  input, select { background: #121214; border: 1px solid #555; color: #fff; padding: 6px; border-radius: 4px; font-size: 12px; }
+  input, select { background: #121214; border: 1px solid #555; color: #fff; padding: 5px; border-radius: 4px; font-size: 12px; }
   .item-input { flex: 1; }
-  .dye-select { width: 130px; }
+  .dye-select { width: 140px; font-size: 11px; }
   
-  .color-badge { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #fff; display: inline-block; flex-shrink: 0; }
+  .color-badge { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #fff; display: inline-block; flex-shrink: 0; box-shadow: 0 0 2px rgba(0,0,0,0.8); }
   
   /* サジェストリスト */
-  .suggest-list { position: absolute; top: 100%; left: 38px; right: 0; background: #222; border: 1px solid #e3b04b; z-index: 99; max-height: 150px; overflow-y: auto; list-style: none; padding: 0; margin: 0; display: none; }
+  .suggest-list { position: absolute; top: 40px; left: 38px; right: 0; background: #222; border: 1px solid #e3b04b; z-index: 99; max-height: 180px; overflow-y: auto; list-style: none; padding: 0; margin: 0; display: none; }
   .suggest-item { padding: 6px 10px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
   .suggest-item:hover { background: #3e3f4a; color: #e3b04b; }
-  .suggest-item img { width: 20px; height: 20px; }
+  .suggest-item img { width: 22px; height: 22px; }
+  .status-text { padding: 6px; font-size: 11px; color: #888; text-align: center; }
 </style>
 </head>
 <body>
 
-<h1>FF14 ミラプリ装備＆カララントメモ</h1>
+<h1>FF14 ミラプリ装備＆カララントメモ (2箇所染色対応)</h1>
 
 <div class="controls">
   <button onclick="addCard()">＋ 新しいメモカードを追加</button>
-  <button onclick="saveAll()">ローカルに保存</button>
+  <button onclick="saveAll()">ブラウザに保存</button>
 </div>
 
 <div class="card-container" id="container"></div>
 
 <script>
-// 代表的なカララントとカラーコードの定義リスト
-const DYES = [
-  { name: "染色なし", hex: "transparent" },
-  { name: "スノウホワイト", hex: "#E4E4E4" },
-  { name: "ジェットブラック", hex: "#191919" },
-  { name: "スートブラック", hex: "#2B2B2B" },
-  { name: "ダラガブレッド", hex: "#781A1A" },
-  { name: "ルビーレッド", hex: "#A81C1C" },
-  { name: "オキュルトブルー", hex: "#1C3B5E" },
-  { name: "ハニーイエロー", hex: "#E5B022" },
-  { name: "シャインゴールド", hex: "#D4AF37" },
-  { name: "ピュアホワイト", hex: "#FFFFFF" }
+// カララント定義（通常色とアディショナルカラー完全分離）
+const ALL_DYES = [
+  { group: "未染色", items: [{ name: "なし / 固有色", hex: "transparent" }] },
+  { group: "ホワイト・ブラック（通常）", items: [
+    { name: "スノウホワイト", hex: "#E4E4E4" }, { name: "アッシュグレー", hex: "#9B9B9B" },
+    { name: "グゥーブーグレー", hex: "#626262" }, { name: "スレートグレー", hex: "#4B4B4B" },
+    { name: "チャコールグレー", hex: "#353535" }, { name: "スートブラック", hex: "#2B2B2B" }
+  ]},
+  { group: "レッド（通常）", items: [
+    { name: "ローズピンク", hex: "#E6A8B8" }, { name: "ライラックピンク", hex: "#C78298" },
+    { name: "コーラルピンク", hex: "#CC6E79" }, { name: "ブラッドレッド", hex: "#912323" },
+    { name: "ワインレッド", hex: "#5C1D24" }, { name: "ダラガブレッド", hex: "#781A1A" },
+    { name: "ロランベリーレッド", hex: "#4A1220" }, { name: "サーモンピンク", hex: "#E88D7D" },
+    { name: "サンセットオレンジ", hex: "#B84E25" }, { name: "メサレッド", hex: "#7A3418" },
+    { name: "バークブラウン", hex: "#482618" }
+  ]},
+  { group: "ブラウン（通常）", items: [
+    { name: "チョコレートブラウン", hex: "#301B12" }, { name: "ラセットブラウン", hex: "#54301D" },
+    { name: "コボルドブラウン", hex: "#3B271E" }, { name: "コルクブラウン", hex: "#BA9868" },
+    { name: "キザミブラウン", hex: "#8A6D3B" }, { name: "アルドゴートブラウン", hex: "#A67C46" },
+    { name: "パンプキンオレンジ", hex: "#C46F1A" }, { name: "オーチャードブラウン", hex: "#513629" },
+    { name: "チェスナットブラウン", hex: "#3D2314" }, { name: "ゴブリンブラウン", hex: "#82715F" },
+    { name: "シィーティングブラウン", hex: "#755D40" }, { name: "ロームブラウン", hex: "#3D2E24" },
+    { name: "オポオポブラウン", hex: "#634735" }, { name: "モルボルブラウン", hex: "#2E211B" },
+    { name: "ハニーイエロー", hex: "#E5B022" }
+  ]},
+  { group: "イエロー（通常）", items: [
+    { name: "ミリタリーグリーン", hex: "#4A4D32" }, { name: "アコライトイエロー", hex: "#D6A33A" },
+    { name: "デザートイエロー", hex: "#CFA04E" }, { name: "ボーンホワイト", hex: "#DBCA9F" },
+    { name: "マスタードイエロー", hex: "#A88128" }, { name: "クリームイエロー", hex: "#F0E2A8" },
+    { name: "クァールイエロー", hex: "#C79C2E" }
+  ]},
+  { group: "グリーン（通常）", items: [
+    { name: "マッドグリーン", hex: "#333C2E" }, { name: "シルフグリーン", hex: "#A3C49B" },
+    { name: "ライムグリーン", hex: "#A0B839" }, { name: "モスグリーン", hex: "#707A4B" },
+    { name: "メドウグリーン", hex: "#83A052" }, { name: "オリーブグリーン", hex: "#4B5238" },
+    { name: "マーシュグリーン", hex: "#323B2A" }, { name: "アップルグリーン", hex: "#87A644" },
+    { name: "サボテングリーン", hex: "#527335" }, { name: "ハンターグリーン", hex: "#274023" },
+    { name: "ターコイズグリーン", hex: "#3A736A" }, { name: "モルボルグリーン", hex: "#1D4733" },
+    { name: "シャドウグリーン", hex: "#334039" }, { name: "オランプグリーン", hex: "#2F5938" },
+    { name: "ボアグリーン", hex: "#4C6B46" }, { name: "ディープウッドグリーン", hex: "#1B2A1A" },
+    { name: "コブラングリーン", hex: "#516B4D" }, { name: "サボテンダグリーン", hex: "#6DA644" }
+  ]},
+  { group: "ブルー（通常）", items: [
+    { name: "アイスブルー", hex: "#B3C8D0" }, { name: "スカイブルー", hex: "#689AB8" },
+    { name: "シーフォグブルー", hex: "#60788A" }, { name: "ピーコックブルー", hex: "#2B5E78" },
+    { name: "ロイヤルブルー", hex: "#22386E" }, { name: "ミッドナイトブルー", hex: "#1A2238" },
+    { name: "シャドウブルー", hex: "#2C3545" }, { name: "ヴォイドブルー", hex: "#17202A" },
+    { name: "ラプトルブルー", hex: "#3C6382" }, { name: "オキュルトブルー", hex: "#1C3B5E" },
+    { name: "ドラグーンブルー", hex: "#2A4165" }, { name: "セルレアブルー", hex: "#2F5073" },
+    { name: "インディゴブルー", hex: "#24334C" }, { name: "ターコイズブルー", hex: "#248B9C" },
+    { name: "ストームブルー", hex: "#234B73" }, { name: "スチールブルー", hex: "#41607A" },
+    { name: "オルシュファンブルー", hex: "#4A729A" }, { name: "シアンブルー", hex: "#00A3D2" },
+    { name: "マリンブルー", hex: "#1D3B5A" }, { name: "ロータスピンク", hex: "#FEA1B8" },
+    { name: "コーラルブルー", hex: "#2B7A78" }
+  ]},
+  { group: "パープル・マゼンタ（通常）", items: [
+    { name: "ラベンダー", hex: "#8B82A8" }, { name: "アイリスパープル", hex: "#675282" },
+    { name: "ヒッポグリフパープル", hex: "#47335C" }, { name: "プラムパープル", hex: "#362447" },
+    { name: "ロイヤルパープル", hex: "#5B2C6F" }, { name: "ブラムブルパープル", hex: "#2D1D38" },
+    { name: "オーキッドピンク", hex: "#D279A6" }, { name: "ブドウパープル", hex: "#412140" },
+    { name: "グロームパープル", hex: "#4F3359" }, { name: "レガルパープル", hex: "#301B3F" },
+    { name: "マゼンタ", hex: "#A01B68" }, { name: "アメジストパープル", hex: "#53336B" },
+    { name: "ワイバーンパープル", hex: "#2B1A3A" }, { name: "シャドウパープル", hex: "#3B2B4C" }
+  ]},
+  { group: "★ アディショナル (純色・メタリック・特殊)", items: [
+    { name: "ピュアホワイト", hex: "#FFFFFF" }, { name: "ジェットブラック", hex: "#191919" },
+    { name: "パールホワイト", hex: "#F2F2F2" }, { name: "ガンメタル", hex: "#2C3539" },
+    { name: "シャインシルバー", hex: "#C0C0C0" }, { name: "シャインゴールド", hex: "#D4AF37" },
+    { name: "メタリックブラス", hex: "#B5A642" }, { name: "ルビーレッド", hex: "#A81C1C" },
+    { name: "チェリーピンク", hex: "#E95295" }, { name: "カナリーイエロー", hex: "#E8D748" },
+    { name: "バニライエロー", hex: "#F5E296" }, { name: "パステルピンク", hex: "#FFB6C1" },
+    { name: "パステルグリーン", hex: "#98FB98" }, { name: "パステルブルー", hex: "#AEC6CF" },
+    { name: "パステルパープル", hex: "#B19CD9" }, { name: "ダークレッド", hex: "#4A0000" },
+    { name: "ダークブラウン", hex: "#211003" }, { name: "ダークイエロー", hex: "#665200" },
+    { name: "ダークグリーン", hex: "#002600" }, { name: "ダークブルー", hex: "#000040" },
+    { name: "ダークパープル", hex: "#200020" }, { name: "メタリックレッド", hex: "#8B0000" },
+    { name: "メタリックグリーン", hex: "#2E8B57" }, { name: "メタリックブルー", hex: "#205493" },
+    { name: "メタリックパープル", hex: "#5D2E8C" }
+  ]}
 ];
 
 const SLOTS = ["武具", "頭防具", "胴防具", "手防具", "脚防具", "足防具"];
 let cardCount = 0;
 
 function createDyeOptionsHtml() {
-  return DYES.map(d => `<option value="${d.name}" data-hex="${d.hex}">${d.name}</option>`).join('');
+  let html = '';
+  ALL_DYES.forEach(group => {
+    html += `<optgroup label="${group.group}">`;
+    group.items.forEach(d => {
+      html += `<option value="${d.name}" data-hex="${d.hex}">${d.name}</option>`;
+    });
+    html += `</optgroup>`;
+  });
+  return html;
 }
 
-function addCard(data = null) {
+function addCard() {
   cardCount++;
   const cardId = cardCount;
   const card = document.createElement('div');
@@ -84,11 +163,26 @@ function addCard(data = null) {
         <div class="input-row">
           <div class="item-preview" id="preview-${cardId}-${slot}"></div>
           <input type="text" class="item-input" id="input-${cardId}-${slot}" placeholder="装備名を入力..." oninput="searchItem(this, '${cardId}', '${slot}')" autocomplete="off">
-          <span class="color-badge" id="badge-${cardId}-${slot}" style="background: transparent;"></span>
-          <select class="dye-select" onchange="updateDyeColor(this, '${cardId}', '${slot}')">
-            ${createDyeOptionsHtml()}
-          </select>
         </div>
+        
+        <!-- 2箇所染色機能 -->
+        <div class="dye-row">
+          <div class="dye-group">
+            <span class="dye-label">染色1:</span>
+            <span class="color-badge" id="badge1-${cardId}-${slot}" style="background: transparent;"></span>
+            <select class="dye-select" onchange="updateDyeColor(this, 'badge1-${cardId}-${slot}')">
+              ${createDyeOptionsHtml()}
+            </select>
+          </div>
+          <div class="dye-group">
+            <span class="dye-label">染色2:</span>
+            <span class="color-badge" id="badge2-${cardId}-${slot}" style="background: transparent;"></span>
+            <select class="dye-select" onchange="updateDyeColor(this, 'badge2-${cardId}-${slot}')">
+              ${createDyeOptionsHtml()}
+            </select>
+          </div>
+        </div>
+
         <ul class="suggest-list" id="suggest-${cardId}-${slot}"></ul>
       </div>
     `;
@@ -105,8 +199,17 @@ function addCard(data = null) {
   document.getElementById('container').appendChild(card);
 }
 
-// Garland Tools APIを使ったリアルタイム検索
-async function searchItem(inputEl, cardId, slot) {
+// デバウンス処理（連打通信防止）
+function debounce(func, delay = 350) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
+// CORSプロキシを経由した検索処理
+const searchItem = debounce(async (inputEl, cardId, slot) => {
   const query = inputEl.value.trim();
   const suggestList = document.getElementById(`suggest-${cardId}-${slot}`);
   
@@ -115,8 +218,15 @@ async function searchItem(inputEl, cardId, slot) {
     return;
   }
 
+  suggestList.innerHTML = '<li class="status-text">検索中...</li>';
+  suggestList.style.display = 'block';
+
+  const rawUrl = `https://www.garlandtools.org/api/search.org.php?text=${encodeURIComponent(query)}&lang=ja`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+
   try {
-    const res = await fetch(`https://www.garlandtools.org/api/search.org.php?text=${encodeURIComponent(query)}&lang=ja`);
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('通信エラー');
     const data = await res.json();
     const items = data.filter(d => d.type === 'item').slice(0, 5);
 
@@ -130,24 +240,24 @@ async function searchItem(inputEl, cardId, slot) {
         
         li.onclick = () => {
           inputEl.value = item.obj.n;
-          // 画像のセット
           document.getElementById(`preview-${cardId}-${slot}`).innerHTML = `<img src="${iconUrl}">`;
           suggestList.style.display = 'none';
         };
         suggestList.appendChild(li);
       });
-      suggestList.style.display = 'block';
+    } else {
+      suggestList.innerHTML = '<li class="status-text">見つかりませんでした</li>';
     }
   } catch(e) {
     console.error(e);
+    suggestList.innerHTML = '<li class="status-text">検索エラー（ネット接続を確認してください）</li>';
   }
-}
+});
 
-// カララントの色変更反映
-function updateDyeColor(selectEl, cardId, slot) {
+function updateDyeColor(selectEl, badgeId) {
   const selectedOption = selectEl.options[selectEl.selectedIndex];
   const hex = selectedOption.getAttribute('data-hex');
-  document.getElementById(`badge-${cardId}-${slot}`).style.background = hex;
+  document.getElementById(badgeId).style.background = hex;
 }
 
 function removeCard(id) {
@@ -158,7 +268,7 @@ function saveAll() {
   alert('ブラウザにメモを保存しました。');
 }
 
-// 初期起動（1枚カードを作成）
+// 初期化
 addCard();
 </script>
 </body>
