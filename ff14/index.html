@@ -5,24 +5,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>FFXIV Mirapri Eden (Local)</title>
-  
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
-  
-  <!-- ローカルのCSSを参照するように修整 (./ を追加) -->
-  <link href="./chunk-vendors.bd61cd22.css" rel="stylesheet">
-  <link href="./app.888555c3.css" rel="stylesheet">
-  
+
   <style>
     body { font-family: 'M PLUS Rounded 1c', sans-serif; }
   </style>
+
+  <!-- 追加コンポーネント用ファイルの事前ロード設定 -->
+  <link href="./css/views-GlamourRecipe.747332cd.css" rel="prefetch" as="style">
+  <link href="./css/views-GlamourRecipeMaker.8bc298fe.css" rel="prefetch" as="style">
+  <link href="./js/layout-default-Index.98754423.js" rel="prefetch" as="script">
+  <link href="./js/views-GlamourRecipe.979621ce.js" rel="prefetch" as="script">
+  <link href="./js/views-GlamourRecipeMaker.6e8b72d4.js" rel="prefetch" as="script">
+
+  <!-- メインスタイルシート -->
+  <link href="./css/chunk-vendors.bd61cd22.css" rel="stylesheet">
+  <link href="./css/app.888555c3.css" rel="stylesheet">
 </head>
 <body>
   <noscript><strong>JavaScriptを有効化してご利用ください。</strong></noscript>
   <div id="app"></div>
 
-  <!-- ローカルのJSを参照するように修整 (./ を追加) -->
-  <script src="./chunk-vendors.db45c981.js"></script>
-  <script src="./app.63dd38aa.js"></script>
+  <!-- メインスクリプト -->
+  <script src="./js/chunk-vendors.db45c981.js"></script>
+  <script src="./js/app.63dd38aa.js"></script>
 </body>
 </html>
